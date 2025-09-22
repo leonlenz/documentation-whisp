@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  scalar:
+    image: scalar/scalar:latest
+    container_name: scalar-docs
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - ./openapi.yaml:/usr/share/nginx/html/spec.yaml:ro
+    environment:
+      - SPEC_URL=/spec.yaml
