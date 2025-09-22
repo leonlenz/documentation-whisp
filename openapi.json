@@ -1,0 +1,1515 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Whisp Real-Time Chat API",
+    "version": "1.0.0",
+    "description": "Real-time chat API with REST endpoints and WebSocket support for instant messaging.\n\n## Base URL\n`https://<client-domain>.api.whispchat.com`\n\n## Authentication\nAll protected endpoints require a valid JSON Web Token (JWT) in the Authorization header.\nTokens expire and can be refreshed via `/api/auth/refresh`.\n\n## WebSocket Connection\nReal-time messaging uses STOMP protocol over WebSocket at `wss://<client-domain>.api.whispchat.com/api/wsConnect`.\nSee the WebSocket section below for detailed protocol documentation.\n",
+    "contact": {
+      "name": "Whisp Chat API Support",
+      "email": "support@whispchat.com"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://{clientDomain}.api.whispchat.com",
+      "description": "Production server",
+      "variables": {
+        "clientDomain": {
+          "default": "example",
+          "description": "Client-specific subdomain"
+        }
+      }
+    }
+  ],
+  "tags": [
+    {
+      "name": "Authentication",
+      "description": "User authentication and token management"
+    },
+    {
+      "name": "Users",
+      "description": "User account management"
+    },
+    {
+      "name": "Chats",
+      "description": "Chat room operations"
+    },
+    {
+      "name": "Messages",
+      "description": "Message retrieval"
+    },
+    {
+      "name": "WebSocket",
+      "description": "Real-time messaging via STOMP/WebSocket"
+    }
+  ],
+  "paths": {
+    "/api/user/registerUser": {
+      "post": {
+        "tags": ["Users"],
+        "summary": "Create User",
+        "description": "Registers a new user account",
+        "operationId": "registerUser",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["username", "firstName", "surName", "email", "password"],
+                "properties": {
+                  "username": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 30,
+                    "pattern": "^[a-zA-Z0-9_]+$",
+                    "example": "johndoe"
+                  },
+                  "firstName": {
+                    "type": "string",
+                    "example": "John"
+                  },
+                  "surName": {
+                    "type": "string",
+                    "example": "Doe"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "john.doe@example.com"
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password",
+                    "minLength": 8,
+                    "example": "SecurePass123!"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User successfully created"
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "message": "Username already exists"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/api/user/signin": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Sign In",
+        "description": "Authenticates user and issues JWT & refresh token",
+        "operationId": "signIn",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["username", "password"],
+                "properties": {
+                  "username": {
+                    "type": "string",
+                    "example": "johndoe"
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password",
+                    "example": "SecurePass123!"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully signed in",
+            "headers": {
+              "Authorization": {
+                "schema": {
+                  "type": "string",
+                  "example": "Bearer eyJhbGciOiJIUzI1NiIs..."
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "username": {
+                      "type": "string"
+                    },
+                    "email": {
+                      "type": "string",
+                      "format": "email"
+                    },
+                    "refreshToken": {
+                      "type": "string"
+                    },
+                    "roles": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": ["USER", "ADMIN"]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/api/user/changeUsername": {
+      "post": {
+        "tags": ["Users"],
+        "summary": "Change Username",
+        "description": "Changes the username of the authenticated user",
+        "operationId": "changeUsername",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["newUsername"],
+                "properties": {
+                  "newUsername": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 30,
+                    "pattern": "^[a-zA-Z0-9_]+$"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Username successfully changed",
+            "headers": {
+              "Authorization": {
+                "schema": {
+                  "type": "string",
+                  "description": "New JWT token"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Username incorrect format or already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Invalid or expired JWT"
+          }
+        }
+      }
+    },
+    "/api/user/deleteUser": {
+      "delete": {
+        "tags": ["Users"],
+        "summary": "Delete User",
+        "description": "Deletes the authenticated user account including all data and messages",
+        "operationId": "deleteUser",
+        "responses": {
+          "200": {
+            "description": "User successfully deleted"
+          },
+          "403": {
+            "description": "Invalid or expired JWT"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/api/user/getUser": {
+      "get": {
+        "tags": ["Users"],
+        "summary": "Get Current User",
+        "description": "Fetches authenticated user information",
+        "operationId": "getCurrentUser",
+        "responses": {
+          "200": {
+            "description": "User information retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "username": {
+                      "type": "string"
+                    },
+                    "email": {
+                      "type": "string",
+                      "format": "email"
+                    },
+                    "role": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": ["USER", "ADMIN"]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Invalid or expired JWT"
+          }
+        }
+      }
+    },
+    "/api/auth/refresh": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Refresh JWT",
+        "description": "Renews JWT using refresh token",
+        "operationId": "refreshToken",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["refreshToken"],
+                "properties": {
+                  "refreshToken": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Token successfully refreshed",
+            "headers": {
+              "Authorization": {
+                "schema": {
+                  "type": "string",
+                  "description": "New JWT token"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body format"
+          },
+          "401": {
+            "description": "Invalid refresh token or JWT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Logout",
+        "description": "Invalidates a refresh token",
+        "operationId": "logout",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["refreshToken"],
+                "properties": {
+                  "refreshToken": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Token successfully invalidated"
+          },
+          "401": {
+            "description": "Invalid refresh token"
+          }
+        }
+      }
+    },
+    "/api/auth/logoutAll": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Logout All Sessions",
+        "description": "Invalidates all refresh tokens for the user",
+        "operationId": "logoutAll",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["refreshToken"],
+                "properties": {
+                  "refreshToken": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "All refresh tokens invalidated"
+          },
+          "403": {
+            "description": "Invalid or expired JWT"
+          }
+        }
+      }
+    },
+    "/api/chat/createChat": {
+      "post": {
+        "tags": ["Chats"],
+        "summary": "Create Chat",
+        "description": "Creates a new chat with two or more users",
+        "operationId": "createChat",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["chatName", "userNames"],
+                "properties": {
+                  "chatName": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100
+                  },
+                  "userNames": {
+                    "type": "array",
+                    "minItems": 2,
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Must include the creating user's username"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Chat successfully created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Chat"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Invalid or expired JWT"
+          }
+        }
+      }
+    },
+    "/api/chat/getChats": {
+      "get": {
+        "tags": ["Chats"],
+        "summary": "List Chats",
+        "description": "Returns all chats for the authenticated user",
+        "operationId": "getChats",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            },
+            "description": "Page number for pagination"
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            },
+            "description": "Number of items per page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of user's chats",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "chats": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Chat"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Invalid or expired JWT"
+          }
+        }
+      }
+    },
+    "/api/messages/getMessages/{chatId}": {
+      "get": {
+        "tags": ["Messages"],
+        "summary": "Get Messages",
+        "description": "Fetches messages from a chat. Automatically marks the last message as read.",
+        "operationId": "getMessages",
+        "parameters": [
+          {
+            "name": "chatId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 50
+            },
+            "description": "Number of messages to retrieve"
+          },
+          {
+            "name": "lastMessage",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of last message for pagination"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Messages retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "messages": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Message"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "User not in chat or chat doesn't exist"
+          },
+          "403": {
+            "description": "Invalid or expired JWT"
+          }
+        }
+      }
+    },
+    "/api/chat/addUser": {
+      "post": {
+        "tags": ["Chats"],
+        "summary": "Add User to Chat",
+        "description": "Adds a user to an existing chat",
+        "operationId": "addUserToChat",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["chatId", "newUsername"],
+                "properties": {
+                  "chatId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "newUsername": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User successfully added"
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/chat/getUsers/{chatId}": {
+      "get": {
+        "tags": ["Chats"],
+        "summary": "Get Users in Chat",
+        "description": "Lists all users in a chat with their read status",
+        "operationId": "getChatUsers",
+        "parameters": [
+          {
+            "name": "chatId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of chat users",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "users": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ChatUser"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "User not in chat or chat doesn't exist"
+          },
+          "403": {
+            "description": "Invalid or expired JWT"
+          }
+        }
+      }
+    },
+    "/api/chat/changeName": {
+      "post": {
+        "tags": ["Chats"],
+        "summary": "Change Chat Name",
+        "description": "Changes the name of an existing chat",
+        "operationId": "changeChatName",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["chatId", "newChatName"],
+                "properties": {
+                  "chatId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "newChatName": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Chat name successfully changed"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "403": {
+            "description": "Invalid or expired JWT"
+          }
+        }
+      }
+    },
+    "/api/chat/deleteChat": {
+      "delete": {
+        "tags": ["Chats"],
+        "summary": "Delete Chat",
+        "description": "Deletes a chat (only creator can perform this action)",
+        "operationId": "deleteChat",
+        "parameters": [
+          {
+            "name": "chatId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Chat successfully deleted"
+          },
+          "400": {
+            "description": "User not in chat or chat doesn't exist"
+          },
+          "401": {
+            "description": "User is not the creator of the chat"
+          },
+          "403": {
+            "description": "Invalid or expired JWT"
+          }
+        }
+      }
+    },
+    "/api/chat/removeUser": {
+      "post": {
+        "tags": ["Chats"],
+        "summary": "Remove User from Chat",
+        "description": "User leaves chat. If creator leaves, ownership transfers to longest-tenured member",
+        "operationId": "removeUserFromChat",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["chatId", "removeUser"],
+                "properties": {
+                  "chatId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "removeUser": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "User ID to remove (must be the requesting user)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User successfully removed"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "403": {
+            "description": "Invalid or expired JWT"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Error message"
+          }
+        },
+        "required": ["message"]
+      },
+      "Chat": {
+        "type": "object",
+        "properties": {
+          "chatId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "chatName": {
+            "type": "string"
+          },
+          "isGroup": {
+            "type": "boolean"
+          },
+          "lastMessageTimestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastMessage": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "creator": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "Message": {
+        "type": "object",
+        "properties": {
+          "chatId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "timeStamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "messageId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "content": {
+            "type": "string"
+          },
+          "edited": {
+            "type": "boolean"
+          },
+          "editedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "replyTo": {
+            "$ref": "#/components/schemas/ReplyMessage"
+          },
+          "reactions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Reaction"
+            }
+          }
+        }
+      },
+      "ReplyMessage": {
+        "type": "object",
+        "properties": {
+          "chatId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "timeStamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "messageId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "content": {
+            "type": "string"
+          },
+          "edited": {
+            "type": "boolean"
+          },
+          "editedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Reaction": {
+        "type": "object",
+        "properties": {
+          "reactionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "chatId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "messageId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reaction": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ChatUser": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "username": {
+            "type": "string"
+          },
+          "joinedChatAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastSeenMessage": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the last message this user has read"
+          }
+        }
+      },
+      "WsSendMessage": {
+        "type": "object",
+        "required": ["type", "senderId", "message", "timeStamp", "chatId"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["SEND_MSG"]
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "message": {
+            "type": "string"
+          },
+          "timeStamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "chatId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "WsEditMessage": {
+        "type": "object",
+        "required": ["type", "senderId", "message", "messageId", "chatId", "timeStamp"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["EDIT_MSG"]
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "message": {
+            "type": "string"
+          },
+          "messageId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "chatId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "timeStamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "WsDeleteMessage": {
+        "type": "object",
+        "required": ["type", "senderId", "chatId", "messageId"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["DELETE_MSG"]
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "chatId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "messageId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "WsTyping": {
+        "type": "object",
+        "required": ["type", "senderId", "chatId"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["TYPING"]
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "chatId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "WsReact": {
+        "type": "object",
+        "required": ["type", "senderId", "chatId", "messageId", "reaction", "timeStamp"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["REACT"]
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "chatId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "messageId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the message being reacted to"
+          },
+          "reaction": {
+            "type": "string"
+          },
+          "timeStamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "WsDeleteReact": {
+        "type": "object",
+        "required": ["type", "senderId", "reactionId"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["DELETE_REACT"]
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reactionId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "WsReply": {
+        "type": "object",
+        "required": ["type", "senderId", "chatId", "messageId", "message", "timeStamp"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["REPLY"]
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "chatId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "messageId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the message being replied to"
+          },
+          "message": {
+            "type": "string"
+          },
+          "timeStamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "WsReadMessage": {
+        "type": "object",
+        "required": ["type", "senderId", "chatId", "messageId"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["READ_MSG"]
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "chatId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "messageId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "WsIncomingMessage": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["SEND_MSG"]
+          },
+          "timeStamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "chatId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "message": {
+            "type": "string"
+          },
+          "messageId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "recipientId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "WsIncomingEdit": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["EDIT_MSG"]
+          },
+          "chatId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "message": {
+            "type": "string"
+          },
+          "messageId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "recipientId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "editedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "WsIncomingDelete": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["DELETE_MSG"]
+          },
+          "chatId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "messageId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "recipientId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "timeStamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "WsIncomingUserJoin": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["USER_JOIN"]
+          },
+          "chatId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "message": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of new user"
+          },
+          "username": {
+            "type": "string"
+          },
+          "recipientId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "WsIncomingUserLeave": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["USER_LEAVE"]
+          },
+          "chatId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "message": {
+            "type": "string",
+            "description": "Leave message"
+          },
+          "recipientId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "timeStamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "WsIncomingNewChat": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["NEW_CHAT"]
+          },
+          "timeStamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "chatId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "recipientId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "message": {
+            "type": "string",
+            "description": "Chat name"
+          }
+        }
+      },
+      "WsIncomingDeleteChat": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["DELETE_CHAT"]
+          },
+          "chatId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "recipientId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "WsIncomingRead": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["READ_MSG"]
+          },
+          "chatId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "recipientId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "messageId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "WsIncomingReact": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["REACT"]
+          },
+          "messageId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "message": {
+            "type": "string",
+            "description": "Reaction emoji or type"
+          },
+          "chatId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "recipientId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "parentMessageId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "timeStamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "WsIncomingDeleteReact": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["DELETE_REACT"]
+          },
+          "messageId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "chatId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "recipientId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "WsIncomingReply": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["REPLY"]
+          },
+          "messageId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "message": {
+            "type": "string"
+          },
+          "chatId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "recipientId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "replyTo": {
+            "$ref": "#/components/schemas/ReplyMessage"
+          },
+          "timeStamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "WsIncomingTyping": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["TYPING"]
+          },
+          "chatId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "recipientId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      }
+    }
+  }
+}
