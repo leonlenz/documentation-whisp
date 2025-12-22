@@ -1,0 +1,1199 @@
+{
+  "asyncapi": "3.0.0",
+  "info": {
+    "title": "Whisp Real-Time Messaging API",
+    "version": "1.0.0",
+    "description": "Real-time messaging API using STOMP over WebSocket for the Whisp Chat platform.\n\n## Connection Flow\n\n1. **Get a WebSocket ticket** by calling `GET /api/user/getTicket` (see REST API docs)\n2. **Establish WebSocket connection** using SockJS\n3. **Connect via STOMP** with JWT authentication\n4. **Subscribe** to your message queue\n5. **Send messages** to the chat destination\n\n## Sample Connection Code\n\n```javascript\nimport SockJS from 'sockjs-client';\nimport { Stomp } from '@stomp/stompjs';\n\n// Step 1: Get ticket from REST API (see OpenAPI spec)\nconst ticketResponse = await fetch('/api/user/getTicket', {\n  headers: { 'Authorization': `Bearer ${jwt}` }\n});\nconst { ticket } = await ticketResponse.json();\n\n// Step 2: Create SockJS connection\nconst socket = new SockJS(`${baseUrl}/api/wsConnect?ticket=${ticket}`);\nconst stompClient = Stomp.over(socket);\n\n// Step 3: Connect with STOMP headers\nstompClient.connect(\n  { Authorization: `Bearer ${jwt}` },  // STOMP headers, NOT HTTP headers\n  () => {\n    // Step 4: Subscribe to receive messages\n    stompClient.subscribe(\n      `/user/${userId}/queue/messages`,\n      (message) => {\n        const payload = JSON.parse(message.body);\n        handleIncomingMessage(payload);\n      }\n    );\n  },\n  (error) => {\n    console.error('STOMP connection error:', error);\n  }\n);\n\n// Step 5: Send a message\nstompClient.send('/api/chat', {}, JSON.stringify({\n  type: 'SEND_MSG',\n  senderId: userId,\n  chatId: chatId,\n  message: 'Hello, world!',\n  timeStamp: new Date().toISOString()\n}));\n```\n\n## Multiple Clients\n\nThe same user may maintain multiple simultaneous WebSocket connections (e.g., across devices or browser tabs). All connected clients will receive real-time events.\n\n## Ticket Expiry\n\nThe WebSocket ticket is very short-lived (~20 seconds). Obtain it immediately before connecting."
+  },
+  "servers": {
+    "production": {
+      "host": "{clientDomain}.api.whispchat.com",
+      "protocol": "wss",
+      "description": "Production WebSocket server",
+      "variables": {
+        "clientDomain": {
+          "default": "demo",
+          "description": "Client-specific subdomain"
+        }
+      },
+      "security": [
+        {
+          "$ref": "#/components/securitySchemes/ticket"
+        },
+        {
+          "$ref": "#/components/securitySchemes/stompmtAuth"
+        }
+      ]
+    }
+  },
+  "channels": {
+    "userMessages": {
+      "address": "/user/{userId}/queue/messages",
+      "title": "User Message Queue",
+      "description": "Subscribe to this channel to receive all real-time events for the authenticated user. Events include new messages, edits, deletions, typing indicators, reactions, and chat membership changes.",
+      "parameters": {
+        "userId": {
+          "description": "The authenticated user's UUID"
+        }
+      },
+      "messages": {
+        "sendMsgEvent": {
+          "$ref": "#/components/messages/SendMsgEvent"
+        },
+        "editMsgEvent": {
+          "$ref": "#/components/messages/EditMsgEvent"
+        },
+        "deleteMsgEvent": {
+          "$ref": "#/components/messages/DeleteMsgEvent"
+        },
+        "userJoinEvent": {
+          "$ref": "#/components/messages/UserJoinEvent"
+        },
+        "userLeaveEvent": {
+          "$ref": "#/components/messages/UserLeaveEvent"
+        },
+        "newChatEvent": {
+          "$ref": "#/components/messages/NewChatEvent"
+        },
+        "deleteChatEvent": {
+          "$ref": "#/components/messages/DeleteChatEvent"
+        },
+        "readMsgEvent": {
+          "$ref": "#/components/messages/ReadMsgEvent"
+        },
+        "reactEvent": {
+          "$ref": "#/components/messages/ReactEvent"
+        },
+        "deleteReactEvent": {
+          "$ref": "#/components/messages/DeleteReactEvent"
+        },
+        "replyEvent": {
+          "$ref": "#/components/messages/ReplyEvent"
+        },
+        "typingEvent": {
+          "$ref": "#/components/messages/TypingEvent"
+        }
+      }
+    },
+    "chat": {
+      "address": "/api/chat",
+      "title": "Chat Actions",
+      "description": "Send messages to this destination to perform chat actions such as sending messages, editing, deleting, reacting, and more.",
+      "messages": {
+        "sendMsgRequest": {
+          "$ref": "#/components/messages/SendMsgRequest"
+        },
+        "editMsgRequest": {
+          "$ref": "#/components/messages/EditMsgRequest"
+        },
+        "deleteMsgRequest": {
+          "$ref": "#/components/messages/DeleteMsgRequest"
+        },
+        "typingRequest": {
+          "$ref": "#/components/messages/TypingRequest"
+        },
+        "reactRequest": {
+          "$ref": "#/components/messages/ReactRequest"
+        },
+        "deleteReactRequest": {
+          "$ref": "#/components/messages/DeleteReactRequest"
+        },
+        "replyRequest": {
+          "$ref": "#/components/messages/ReplyRequest"
+        },
+        "readMsgRequest": {
+          "$ref": "#/components/messages/ReadMsgRequest"
+        }
+      }
+    }
+  },
+  "operations": {
+    "receiveMessages": {
+      "action": "receive",
+      "channel": {
+        "$ref": "#/channels/userMessages"
+      },
+      "title": "Receive Real-Time Events",
+      "summary": "Subscribe to receive all real-time chat events",
+      "description": "After connecting via STOMP, subscribe to `/user/{userId}/queue/messages` to receive real-time events. The server will push events for new messages, edits, deletions, reactions, typing indicators, and chat membership changes.",
+      "messages": [
+        { "$ref": "#/channels/userMessages/messages/sendMsgEvent" },
+        { "$ref": "#/channels/userMessages/messages/editMsgEvent" },
+        { "$ref": "#/channels/userMessages/messages/deleteMsgEvent" },
+        { "$ref": "#/channels/userMessages/messages/userJoinEvent" },
+        { "$ref": "#/channels/userMessages/messages/userLeaveEvent" },
+        { "$ref": "#/channels/userMessages/messages/newChatEvent" },
+        { "$ref": "#/channels/userMessages/messages/deleteChatEvent" },
+        { "$ref": "#/channels/userMessages/messages/readMsgEvent" },
+        { "$ref": "#/channels/userMessages/messages/reactEvent" },
+        { "$ref": "#/channels/userMessages/messages/deleteReactEvent" },
+        { "$ref": "#/channels/userMessages/messages/replyEvent" },
+        { "$ref": "#/channels/userMessages/messages/typingEvent" }
+      ]
+    },
+    "sendChatAction": {
+      "action": "send",
+      "channel": {
+        "$ref": "#/channels/chat"
+      },
+      "title": "Send Chat Actions",
+      "summary": "Send messages and perform chat actions",
+      "description": "Send STOMP messages to `/api/chat` to perform actions like sending messages, editing, deleting, reacting, and indicating typing status.",
+      "messages": [
+        { "$ref": "#/channels/chat/messages/sendMsgRequest" },
+        { "$ref": "#/channels/chat/messages/editMsgRequest" },
+        { "$ref": "#/channels/chat/messages/deleteMsgRequest" },
+        { "$ref": "#/channels/chat/messages/typingRequest" },
+        { "$ref": "#/channels/chat/messages/reactRequest" },
+        { "$ref": "#/channels/chat/messages/deleteReactRequest" },
+        { "$ref": "#/channels/chat/messages/replyRequest" },
+        { "$ref": "#/channels/chat/messages/readMsgRequest" }
+      ]
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "ticket": {
+        "type": "httpApiKey",
+        "name": "ticket",
+        "in": "query",
+        "description": "Short-lived WebSocket ticket obtained from `GET /api/user/getTicket`. Valid for approximately 20 seconds."
+      },
+      "stompmtAuth": {
+        "type": "httpApiKey",
+        "name": "Authorization",
+        "in": "header",
+        "description": "JWT Bearer token passed as a STOMP header during connection. Format: `Bearer <JWT>`"
+      }
+    },
+    "messages": {
+      "SendMsgRequest": {
+        "name": "SendMsgRequest",
+        "title": "Send Message",
+        "summary": "Send a new message to a chat",
+        "contentType": "application/json",
+        "payload": {
+          "$ref": "#/components/schemas/SendMsgRequestPayload"
+        }
+      },
+      "EditMsgRequest": {
+        "name": "EditMsgRequest",
+        "title": "Edit Message",
+        "summary": "Edit an existing message",
+        "description": "The timeStamp is the time of editing, not the timestamp of the original message.",
+        "contentType": "application/json",
+        "payload": {
+          "$ref": "#/components/schemas/EditMsgRequestPayload"
+        }
+      },
+      "DeleteMsgRequest": {
+        "name": "DeleteMsgRequest",
+        "title": "Delete Message",
+        "summary": "Delete a message",
+        "contentType": "application/json",
+        "payload": {
+          "$ref": "#/components/schemas/DeleteMsgRequestPayload"
+        }
+      },
+      "TypingRequest": {
+        "name": "TypingRequest",
+        "title": "Typing Indicator",
+        "summary": "Indicate that the user is typing",
+        "contentType": "application/json",
+        "payload": {
+          "$ref": "#/components/schemas/TypingRequestPayload"
+        }
+      },
+      "ReactRequest": {
+        "name": "ReactRequest",
+        "title": "React to Message",
+        "summary": "Add a reaction to a message",
+        "description": "The `messageId` is the UUID of the message being reacted to. Another reaction to the same message by the same user will overwrite the previous reaction.",
+        "contentType": "application/json",
+        "payload": {
+          "$ref": "#/components/schemas/ReactRequestPayload"
+        }
+      },
+      "DeleteReactRequest": {
+        "name": "DeleteReactRequest",
+        "title": "Remove Reaction",
+        "summary": "Remove a reaction from a message",
+        "description": "The `reactionId` can be found in the response of `/getMessages` or in the message object sent to the user after they reacted.",
+        "contentType": "application/json",
+        "payload": {
+          "$ref": "#/components/schemas/DeleteReactRequestPayload"
+        }
+      },
+      "ReplyRequest": {
+        "name": "ReplyRequest",
+        "title": "Reply to Message",
+        "summary": "Reply to an existing message",
+        "description": "The `messageId` is the UUID of the message being replied to.",
+        "contentType": "application/json",
+        "payload": {
+          "$ref": "#/components/schemas/ReplyRequestPayload"
+        }
+      },
+      "ReadMsgRequest": {
+        "name": "ReadMsgRequest",
+        "title": "Mark Message as Read",
+        "summary": "Send a read receipt for a message",
+        "description": "Send this when a chat is opened and `/getMessages` was NOT called (that endpoint automatically triggers a read), or when a new message arrives while the user is viewing the chat.",
+        "contentType": "application/json",
+        "payload": {
+          "$ref": "#/components/schemas/ReadMsgRequestPayload"
+        }
+      },
+      "SendMsgEvent": {
+        "name": "SendMsgEvent",
+        "title": "New Message",
+        "summary": "A new message was received",
+        "contentType": "application/json",
+        "payload": {
+          "$ref": "#/components/schemas/SendMsgEventPayload"
+        }
+      },
+      "EditMsgEvent": {
+        "name": "EditMsgEvent",
+        "title": "Message Edited",
+        "summary": "A message was edited",
+        "contentType": "application/json",
+        "payload": {
+          "$ref": "#/components/schemas/EditMsgEventPayload"
+        }
+      },
+      "DeleteMsgEvent": {
+        "name": "DeleteMsgEvent",
+        "title": "Message Deleted",
+        "summary": "A message was deleted",
+        "description": "When received, update the chat's last message attribute to \"Message Deleted\" locally if this was the last message.",
+        "contentType": "application/json",
+        "payload": {
+          "$ref": "#/components/schemas/DeleteMsgEventPayload"
+        }
+      },
+      "UserJoinEvent": {
+        "name": "UserJoinEvent",
+        "title": "User Joined Chat",
+        "summary": "A user was added to a chat",
+        "description": "The `message` attribute contains the new user's ID, and `username` contains their username.",
+        "contentType": "application/json",
+        "payload": {
+          "$ref": "#/components/schemas/UserJoinEventPayload"
+        }
+      },
+      "UserLeaveEvent": {
+        "name": "UserLeaveEvent",
+        "title": "User Left Chat",
+        "summary": "A user left the chat",
+        "contentType": "application/json",
+        "payload": {
+          "$ref": "#/components/schemas/UserLeaveEventPayload"
+        }
+      },
+      "NewChatEvent": {
+        "name": "NewChatEvent",
+        "title": "New Chat Created",
+        "summary": "A new chat was created that includes this user",
+        "contentType": "application/json",
+        "payload": {
+          "$ref": "#/components/schemas/NewChatEventPayload"
+        }
+      },
+      "DeleteChatEvent": {
+        "name": "DeleteChatEvent",
+        "title": "Chat Deleted",
+        "summary": "A chat was deleted",
+        "contentType": "application/json",
+        "payload": {
+          "$ref": "#/components/schemas/DeleteChatEventPayload"
+        }
+      },
+      "ReadMsgEvent": {
+        "name": "ReadMsgEvent",
+        "title": "Message Read",
+        "summary": "A message was read by another user",
+        "contentType": "application/json",
+        "payload": {
+          "$ref": "#/components/schemas/ReadMsgEventPayload"
+        }
+      },
+      "ReactEvent": {
+        "name": "ReactEvent",
+        "title": "Reaction Added",
+        "summary": "A reaction was added to a message",
+        "description": "The `parentMessageId` field is the message that was reacted to. The `message` attribute is the reaction type or emoji.",
+        "contentType": "application/json",
+        "payload": {
+          "$ref": "#/components/schemas/ReactEventPayload"
+        }
+      },
+      "DeleteReactEvent": {
+        "name": "DeleteReactEvent",
+        "title": "Reaction Removed",
+        "summary": "A reaction was removed from a message",
+        "contentType": "application/json",
+        "payload": {
+          "$ref": "#/components/schemas/DeleteReactEventPayload"
+        }
+      },
+      "ReplyEvent": {
+        "name": "ReplyEvent",
+        "title": "Reply Received",
+        "summary": "A reply to a message was received",
+        "contentType": "application/json",
+        "payload": {
+          "$ref": "#/components/schemas/ReplyEventPayload"
+        }
+      },
+      "TypingEvent": {
+        "name": "TypingEvent",
+        "title": "User Typing",
+        "summary": "A user is typing in a chat",
+        "contentType": "application/json",
+        "payload": {
+          "$ref": "#/components/schemas/TypingEventPayload"
+        }
+      }
+    },
+    "schemas": {
+      "SendMsgRequestPayload": {
+        "type": "object",
+        "required": ["type", "senderId", "message", "timeStamp", "chatId"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "SEND_MSG",
+            "description": "Message type identifier"
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the sending user"
+          },
+          "message": {
+            "type": "string",
+            "description": "Message content"
+          },
+          "timeStamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Client-side timestamp (ISO 8601)"
+          },
+          "chatId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Target chat ID"
+          }
+        },
+        "example": {
+          "type": "SEND_MSG",
+          "senderId": "550e8400-e29b-41d4-a716-446655440000",
+          "message": "Hello, world!",
+          "timeStamp": "2024-01-15T10:30:00Z",
+          "chatId": "660e8400-e29b-41d4-a716-446655440001"
+        }
+      },
+      "EditMsgRequestPayload": {
+        "type": "object",
+        "required": ["type", "senderId", "message", "messageId", "chatId", "timeStamp"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "EDIT_MSG",
+            "description": "Message type identifier"
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the sending user"
+          },
+          "message": {
+            "type": "string",
+            "description": "New message content"
+          },
+          "messageId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the message to edit"
+          },
+          "chatId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Chat ID"
+          },
+          "timeStamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Time of editing (ISO 8601)"
+          }
+        },
+        "example": {
+          "type": "EDIT_MSG",
+          "senderId": "550e8400-e29b-41d4-a716-446655440000",
+          "message": "Hello, world! (edited)",
+          "messageId": "770e8400-e29b-41d4-a716-446655440002",
+          "chatId": "660e8400-e29b-41d4-a716-446655440001",
+          "timeStamp": "2024-01-15T10:35:00Z"
+        }
+      },
+      "DeleteMsgRequestPayload": {
+        "type": "object",
+        "required": ["type", "senderId", "chatId", "messageId"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "DELETE_MSG",
+            "description": "Message type identifier"
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the sending user"
+          },
+          "chatId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Chat ID"
+          },
+          "messageId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the message to delete"
+          }
+        },
+        "example": {
+          "type": "DELETE_MSG",
+          "senderId": "550e8400-e29b-41d4-a716-446655440000",
+          "chatId": "660e8400-e29b-41d4-a716-446655440001",
+          "messageId": "770e8400-e29b-41d4-a716-446655440002"
+        }
+      },
+      "TypingRequestPayload": {
+        "type": "object",
+        "required": ["type", "senderId", "chatId"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "TYPING",
+            "description": "Message type identifier"
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the typing user"
+          },
+          "chatId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Chat ID"
+          }
+        },
+        "example": {
+          "type": "TYPING",
+          "senderId": "550e8400-e29b-41d4-a716-446655440000",
+          "chatId": "660e8400-e29b-41d4-a716-446655440001"
+        }
+      },
+      "ReactRequestPayload": {
+        "type": "object",
+        "required": ["type", "senderId", "chatId", "messageId", "reaction", "timeStamp"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "REACT",
+            "description": "Message type identifier"
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the reacting user"
+          },
+          "chatId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Chat ID"
+          },
+          "messageId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the message to react to"
+          },
+          "reaction": {
+            "type": "string",
+            "description": "Reaction type or emoji"
+          },
+          "timeStamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Reaction timestamp (ISO 8601)"
+          }
+        },
+        "example": {
+          "type": "REACT",
+          "senderId": "550e8400-e29b-41d4-a716-446655440000",
+          "chatId": "660e8400-e29b-41d4-a716-446655440001",
+          "messageId": "770e8400-e29b-41d4-a716-446655440002",
+          "reaction": "👍",
+          "timeStamp": "2024-01-15T10:32:00Z"
+        }
+      },
+      "DeleteReactRequestPayload": {
+        "type": "object",
+        "required": ["type", "senderId", "reactionId"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "DELETE_REACT",
+            "description": "Message type identifier"
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the user removing their reaction"
+          },
+          "reactionId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the reaction to remove"
+          }
+        },
+        "example": {
+          "type": "DELETE_REACT",
+          "senderId": "550e8400-e29b-41d4-a716-446655440000",
+          "reactionId": "880e8400-e29b-41d4-a716-446655440003"
+        }
+      },
+      "ReplyRequestPayload": {
+        "type": "object",
+        "required": ["type", "senderId", "chatId", "messageId", "message", "timeStamp"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "REPLY",
+            "description": "Message type identifier"
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the replying user"
+          },
+          "chatId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Chat ID"
+          },
+          "messageId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the message being replied to"
+          },
+          "message": {
+            "type": "string",
+            "description": "Reply message content"
+          },
+          "timeStamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Reply timestamp (ISO 8601)"
+          }
+        },
+        "example": {
+          "type": "REPLY",
+          "senderId": "550e8400-e29b-41d4-a716-446655440000",
+          "chatId": "660e8400-e29b-41d4-a716-446655440001",
+          "messageId": "770e8400-e29b-41d4-a716-446655440002",
+          "message": "I agree with this!",
+          "timeStamp": "2024-01-15T10:33:00Z"
+        }
+      },
+      "ReadMsgRequestPayload": {
+        "type": "object",
+        "required": ["type", "senderId", "chatId", "messageId"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "READ_MSG",
+            "description": "Message type identifier"
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the reading user"
+          },
+          "chatId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Chat ID"
+          },
+          "messageId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the message being marked as read"
+          }
+        },
+        "example": {
+          "type": "READ_MSG",
+          "senderId": "550e8400-e29b-41d4-a716-446655440000",
+          "chatId": "660e8400-e29b-41d4-a716-446655440001",
+          "messageId": "770e8400-e29b-41d4-a716-446655440002"
+        }
+      },
+      "SendMsgEventPayload": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "SEND_MSG",
+            "description": "Event type identifier"
+          },
+          "timeStamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Message timestamp (ISO 8601)"
+          },
+          "chatId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Chat ID"
+          },
+          "message": {
+            "type": "string",
+            "description": "Message content"
+          },
+          "messageId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique message identifier"
+          },
+          "recipientId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the recipient (current user)"
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the message sender"
+          }
+        },
+        "example": {
+          "type": "SEND_MSG",
+          "timeStamp": "2024-01-15T10:30:00Z",
+          "chatId": "660e8400-e29b-41d4-a716-446655440001",
+          "message": "Hello, world!",
+          "messageId": "770e8400-e29b-41d4-a716-446655440002",
+          "recipientId": "550e8400-e29b-41d4-a716-446655440000",
+          "senderId": "990e8400-e29b-41d4-a716-446655440004"
+        }
+      },
+      "EditMsgEventPayload": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "EDIT_MSG",
+            "description": "Event type identifier"
+          },
+          "chatId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Chat ID"
+          },
+          "message": {
+            "type": "string",
+            "description": "New message content"
+          },
+          "messageId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the edited message"
+          },
+          "recipientId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the recipient"
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the user who edited the message"
+          },
+          "editedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the message was edited (ISO 8601)"
+          }
+        },
+        "example": {
+          "type": "EDIT_MSG",
+          "chatId": "660e8400-e29b-41d4-a716-446655440001",
+          "message": "Hello, world! (edited)",
+          "messageId": "770e8400-e29b-41d4-a716-446655440002",
+          "recipientId": "550e8400-e29b-41d4-a716-446655440000",
+          "senderId": "990e8400-e29b-41d4-a716-446655440004",
+          "editedAt": "2024-01-15T10:35:00Z"
+        }
+      },
+      "DeleteMsgEventPayload": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "DELETE_MSG",
+            "description": "Event type identifier"
+          },
+          "chatId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Chat ID"
+          },
+          "messageId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the deleted message"
+          },
+          "recipientId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the recipient"
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the user who deleted the message"
+          },
+          "timeStamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Deletion timestamp (ISO 8601)"
+          }
+        },
+        "example": {
+          "type": "DELETE_MSG",
+          "chatId": "660e8400-e29b-41d4-a716-446655440001",
+          "messageId": "770e8400-e29b-41d4-a716-446655440002",
+          "recipientId": "550e8400-e29b-41d4-a716-446655440000",
+          "senderId": "990e8400-e29b-41d4-a716-446655440004",
+          "timeStamp": "2024-01-15T10:40:00Z"
+        }
+      },
+      "UserJoinEventPayload": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "USER_JOIN",
+            "description": "Event type identifier"
+          },
+          "chatId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Chat ID"
+          },
+          "message": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the new user"
+          },
+          "username": {
+            "type": "string",
+            "description": "Username of the new user"
+          },
+          "recipientId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the recipient"
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the user who added the new member"
+          }
+        },
+        "example": {
+          "type": "USER_JOIN",
+          "chatId": "660e8400-e29b-41d4-a716-446655440001",
+          "message": "aa0e8400-e29b-41d4-a716-446655440005",
+          "username": "newuser",
+          "recipientId": "550e8400-e29b-41d4-a716-446655440000",
+          "senderId": "990e8400-e29b-41d4-a716-446655440004"
+        }
+      },
+      "UserLeaveEventPayload": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "USER_LEAVE",
+            "description": "Event type identifier"
+          },
+          "chatId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Chat ID"
+          },
+          "message": {
+            "type": "string",
+            "description": "Leave message (e.g., \"{username} left the Chat\")"
+          },
+          "recipientId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the recipient"
+          },
+          "timeStamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Leave timestamp (ISO 8601)"
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the user who left"
+          }
+        },
+        "example": {
+          "type": "USER_LEAVE",
+          "chatId": "660e8400-e29b-41d4-a716-446655440001",
+          "message": "johndoe left the Chat",
+          "recipientId": "550e8400-e29b-41d4-a716-446655440000",
+          "timeStamp": "2024-01-15T11:00:00Z",
+          "senderId": "990e8400-e29b-41d4-a716-446655440004"
+        }
+      },
+      "NewChatEventPayload": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "NEW_CHAT",
+            "description": "Event type identifier"
+          },
+          "timeStamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Creation timestamp (ISO 8601)"
+          },
+          "chatId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "New chat ID"
+          },
+          "recipientId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the recipient"
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the user who created the chat"
+          },
+          "message": {
+            "type": "string",
+            "description": "Chat name"
+          }
+        },
+        "example": {
+          "type": "NEW_CHAT",
+          "timeStamp": "2024-01-15T09:00:00Z",
+          "chatId": "660e8400-e29b-41d4-a716-446655440001",
+          "recipientId": "550e8400-e29b-41d4-a716-446655440000",
+          "senderId": "990e8400-e29b-41d4-a716-446655440004",
+          "message": "Project Discussion"
+        }
+      },
+      "DeleteChatEventPayload": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "DELETE_CHAT",
+            "description": "Event type identifier"
+          },
+          "chatId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Deleted chat ID"
+          },
+          "recipientId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the recipient"
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the user who deleted the chat"
+          }
+        },
+        "example": {
+          "type": "DELETE_CHAT",
+          "chatId": "660e8400-e29b-41d4-a716-446655440001",
+          "recipientId": "550e8400-e29b-41d4-a716-446655440000",
+          "senderId": "990e8400-e29b-41d4-a716-446655440004"
+        }
+      },
+      "ReadMsgEventPayload": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "READ_MSG",
+            "description": "Event type identifier"
+          },
+          "chatId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Chat ID"
+          },
+          "recipientId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the recipient (current user)"
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the user who read the message"
+          },
+          "messageId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the message that was read"
+          }
+        },
+        "example": {
+          "type": "READ_MSG",
+          "chatId": "660e8400-e29b-41d4-a716-446655440001",
+          "recipientId": "550e8400-e29b-41d4-a716-446655440000",
+          "senderId": "990e8400-e29b-41d4-a716-446655440004",
+          "messageId": "770e8400-e29b-41d4-a716-446655440002"
+        }
+      },
+      "ReactEventPayload": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "REACT",
+            "description": "Event type identifier"
+          },
+          "messageId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the reaction (for deletion purposes)"
+          },
+          "message": {
+            "type": "string",
+            "description": "Reaction type or emoji"
+          },
+          "chatId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Chat ID"
+          },
+          "recipientId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the recipient"
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the user who reacted"
+          },
+          "parentMessageId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the message that was reacted to"
+          },
+          "timeStamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Reaction timestamp (ISO 8601)"
+          }
+        },
+        "example": {
+          "type": "REACT",
+          "messageId": "880e8400-e29b-41d4-a716-446655440003",
+          "message": "👍",
+          "chatId": "660e8400-e29b-41d4-a716-446655440001",
+          "recipientId": "550e8400-e29b-41d4-a716-446655440000",
+          "senderId": "990e8400-e29b-41d4-a716-446655440004",
+          "parentMessageId": "770e8400-e29b-41d4-a716-446655440002",
+          "timeStamp": "2024-01-15T10:32:00Z"
+        }
+      },
+      "DeleteReactEventPayload": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "DELETE_REACT",
+            "description": "Event type identifier"
+          },
+          "messageId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the deleted reaction"
+          },
+          "chatId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Chat ID"
+          },
+          "recipientId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the recipient"
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the user who removed the reaction"
+          }
+        },
+        "example": {
+          "type": "DELETE_REACT",
+          "messageId": "880e8400-e29b-41d4-a716-446655440003",
+          "chatId": "660e8400-e29b-41d4-a716-446655440001",
+          "recipientId": "550e8400-e29b-41d4-a716-446655440000",
+          "senderId": "990e8400-e29b-41d4-a716-446655440004"
+        }
+      },
+      "ReplyEventPayload": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "REPLY",
+            "description": "Event type identifier"
+          },
+          "messageId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the reply message"
+          },
+          "message": {
+            "type": "string",
+            "description": "Reply content"
+          },
+          "chatId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Chat ID"
+          },
+          "recipientId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the recipient"
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the replying user"
+          },
+          "replyTo": {
+            "$ref": "#/components/schemas/ReplyToMessage"
+          },
+          "timeStamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Reply timestamp (ISO 8601)"
+          }
+        },
+        "example": {
+          "type": "REPLY",
+          "messageId": "bb0e8400-e29b-41d4-a716-446655440006",
+          "message": "I agree with this!",
+          "chatId": "660e8400-e29b-41d4-a716-446655440001",
+          "recipientId": "550e8400-e29b-41d4-a716-446655440000",
+          "senderId": "990e8400-e29b-41d4-a716-446655440004",
+          "replyTo": {
+            "chatId": "660e8400-e29b-41d4-a716-446655440001",
+            "timeStamp": "2024-01-15T10:30:00Z",
+            "messageId": "770e8400-e29b-41d4-a716-446655440002",
+            "senderId": "550e8400-e29b-41d4-a716-446655440000",
+            "content": "Hello, world!",
+            "edited": false,
+            "editedAt": null
+          },
+          "timeStamp": "2024-01-15T10:33:00Z"
+        }
+      },
+      "TypingEventPayload": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "TYPING",
+            "description": "Event type identifier"
+          },
+          "chatId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Chat ID"
+          },
+          "recipientId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the recipient"
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the typing user"
+          }
+        },
+        "example": {
+          "type": "TYPING",
+          "chatId": "660e8400-e29b-41d4-a716-446655440001",
+          "recipientId": "550e8400-e29b-41d4-a716-446655440000",
+          "senderId": "990e8400-e29b-41d4-a716-446655440004"
+        }
+      },
+      "ReplyToMessage": {
+        "type": "object",
+        "description": "The original message being replied to",
+        "properties": {
+          "chatId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Chat ID"
+          },
+          "timeStamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Original message timestamp (ISO 8601)"
+          },
+          "messageId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Original message ID"
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Original message sender ID"
+          },
+          "content": {
+            "type": "string",
+            "description": "Original message content"
+          },
+          "edited": {
+            "type": "boolean",
+            "description": "Whether the original message was edited"
+          },
+          "editedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the original message was edited (ISO 8601)",
+            "nullable": true
+          }
+        }
+      }
+    }
+  }
+}
