@@ -1,0 +1,831 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Whisp Real-Time Messaging",
+    "version": "1.0.0",
+    "description": "Real-time messaging using STOMP over WebSocket for the Whisp Chat platform.\n\n## Connection Flow\n\n1. **Get a WebSocket ticket** - Call `GET /api/user/getTicket` (see REST API)\n2. **Establish WebSocket connection** - Connect using SockJS\n3. **Connect via STOMP** - Authenticate with JWT in STOMP headers\n4. **Subscribe** - Subscribe to your personal message queue\n5. **Send messages** - Send actions to the chat destination\n\n## Connection Code Example\n\n```javascript\nimport SockJS from 'sockjs-client';\nimport { Stomp } from '@stomp/stompjs';\n\n// Step 1: Get ticket from REST API\nconst ticketResponse = await fetch('/api/user/getTicket', {\n  headers: { 'Authorization': `Bearer ${jwt}` }\n});\nconst { ticket } = await ticketResponse.json();\n\n// Step 2: Create SockJS connection\nconst socket = new SockJS(\n  `https://demo.api.whispchat.com/api/wsConnect?ticket=${ticket}`\n);\nconst stompClient = Stomp.over(socket);\n\n// Step 3: Connect with STOMP headers (NOT HTTP headers!)\nstompClient.connect(\n  { Authorization: `Bearer ${jwt}` },\n  () => {\n    // Step 4: Subscribe to receive messages\n    stompClient.subscribe(\n      `/user/${userId}/queue/messages`,\n      (message) => {\n        const event = JSON.parse(message.body);\n        handleEvent(event);\n      }\n    );\n  }\n);\n\n// Step 5: Send a message\nstompClient.send('/api/chat', {}, JSON.stringify({\n  type: 'SEND_MSG',\n  senderId: userId,\n  chatId: chatId,\n  message: 'Hello!',\n  timeStamp: new Date().toISOString()\n}));\n```\n\n## Important Notes\n\n- **Ticket Expiry**: The WebSocket ticket is valid for ~20 seconds. Get it immediately before connecting.\n- **Multiple Clients**: A user can have multiple simultaneous connections (e.g., multiple devices).\n- **STOMP Headers**: The JWT is passed as a STOMP header during connection, NOT as an HTTP header.\n- **Reconnection**: If disconnected, get a new ticket and reconnect. Missed messages should be fetched via REST API."
+  },
+  "servers": [
+    {
+      "url": "wss://{clientDomain}.api.whispchat.com",
+      "description": "Production WebSocket server",
+      "variables": {
+        "clientDomain": {
+          "default": "demo",
+          "description": "Client-specific subdomain"
+        }
+      }
+    }
+  ],
+  "tags": [
+    {
+      "name": "Subscribe",
+      "description": "## Receiving Events\n\nSubscribe to `/user/{userId}/queue/messages` to receive real-time events.\n\n### Event Types\n\n| Event | Description |\n|-------|-------------|\n| `SEND_MSG` | New message received |\n| `EDIT_MSG` | Message was edited |\n| `DELETE_MSG` | Message was deleted |\n| `REPLY` | Reply to a message |\n| `TYPING` | User is typing |\n| `REACT` | Reaction added |\n| `DELETE_REACT` | Reaction removed |\n| `READ_MSG` | Message was read |\n| `USER_JOIN` | User added to chat |\n| `USER_LEAVE` | User left chat |\n| `NEW_CHAT` | New chat created |\n| `DELETE_CHAT` | Chat deleted |"
+    },
+    {
+      "name": "Send Actions",
+      "description": "## Sending Actions\n\nSend STOMP messages to `/api/chat` to perform actions.\n\n### Action Types\n\n| Action | Description |\n|--------|-------------|\n| `SEND_MSG` | Send a new message |\n| `EDIT_MSG` | Edit your message |\n| `DELETE_MSG` | Delete your message |\n| `REPLY` | Reply to a message |\n| `TYPING` | Indicate you're typing |\n| `REACT` | Add a reaction |\n| `DELETE_REACT` | Remove a reaction |\n| `READ_MSG` | Mark message as read |\n\n### Example\n\n```javascript\nstompClient.send('/api/chat', {}, JSON.stringify({\n  type: 'SEND_MSG',\n  senderId: userId,\n  chatId: chatId,\n  message: 'Hello!',\n  timeStamp: new Date().toISOString()\n}));\n```"
+    },
+    {
+      "name": "Receive Events",
+      "description": "Events received when subscribed to `/user/{userId}/queue/messages`"
+    },
+    {
+      "name": "Send Payloads",
+      "description": "Payloads to send to `/api/chat`"
+    }
+  ],
+  "paths": {
+    "/user/{userId}/queue/messages#SEND_MSG": {
+      "get": {
+        "tags": ["Receive Events"],
+        "summary": "SEND_MSG - New Message",
+        "description": "Received when a new message is sent to a chat you're in.",
+        "operationId": "receiveSendMsg",
+        "parameters": [
+          { "name": "userId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Event payload",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SendMsgEvent" },
+                "example": {
+                  "type": "SEND_MSG",
+                  "timeStamp": "2024-01-15T10:30:00Z",
+                  "chatId": "660e8400-e29b-41d4-a716-446655440001",
+                  "message": "Hello, world!",
+                  "messageId": "770e8400-e29b-41d4-a716-446655440002",
+                  "recipientId": "550e8400-e29b-41d4-a716-446655440000",
+                  "senderId": "990e8400-e29b-41d4-a716-446655440004"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/{userId}/queue/messages#EDIT_MSG": {
+      "get": {
+        "tags": ["Receive Events"],
+        "summary": "EDIT_MSG - Message Edited",
+        "description": "Received when a message is edited.",
+        "operationId": "receiveEditMsg",
+        "parameters": [
+          { "name": "userId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Event payload",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/EditMsgEvent" },
+                "example": {
+                  "type": "EDIT_MSG",
+                  "chatId": "660e8400-e29b-41d4-a716-446655440001",
+                  "message": "Hello, world! (edited)",
+                  "messageId": "770e8400-e29b-41d4-a716-446655440002",
+                  "recipientId": "550e8400-e29b-41d4-a716-446655440000",
+                  "senderId": "990e8400-e29b-41d4-a716-446655440004",
+                  "editedAt": "2024-01-15T10:35:00Z"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/{userId}/queue/messages#DELETE_MSG": {
+      "get": {
+        "tags": ["Receive Events"],
+        "summary": "DELETE_MSG - Message Deleted",
+        "description": "Received when a message is deleted. Update the chat's last message to \"Message Deleted\" if this was the last message.",
+        "operationId": "receiveDeleteMsg",
+        "parameters": [
+          { "name": "userId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Event payload",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/DeleteMsgEvent" },
+                "example": {
+                  "type": "DELETE_MSG",
+                  "chatId": "660e8400-e29b-41d4-a716-446655440001",
+                  "messageId": "770e8400-e29b-41d4-a716-446655440002",
+                  "recipientId": "550e8400-e29b-41d4-a716-446655440000",
+                  "senderId": "990e8400-e29b-41d4-a716-446655440004",
+                  "timeStamp": "2024-01-15T10:40:00Z"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/{userId}/queue/messages#REPLY": {
+      "get": {
+        "tags": ["Receive Events"],
+        "summary": "REPLY - Reply Received",
+        "description": "Received when someone replies to a message.",
+        "operationId": "receiveReply",
+        "parameters": [
+          { "name": "userId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Event payload",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ReplyEvent" },
+                "example": {
+                  "type": "REPLY",
+                  "messageId": "bb0e8400-e29b-41d4-a716-446655440006",
+                  "message": "I agree!",
+                  "chatId": "660e8400-e29b-41d4-a716-446655440001",
+                  "recipientId": "550e8400-e29b-41d4-a716-446655440000",
+                  "senderId": "990e8400-e29b-41d4-a716-446655440004",
+                  "replyTo": {
+                    "chatId": "660e8400-e29b-41d4-a716-446655440001",
+                    "timeStamp": "2024-01-15T10:30:00Z",
+                    "messageId": "770e8400-e29b-41d4-a716-446655440002",
+                    "senderId": "550e8400-e29b-41d4-a716-446655440000",
+                    "content": "Hello, world!",
+                    "edited": false,
+                    "editedAt": null
+                  },
+                  "timeStamp": "2024-01-15T10:33:00Z"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/{userId}/queue/messages#TYPING": {
+      "get": {
+        "tags": ["Receive Events"],
+        "summary": "TYPING - User Typing",
+        "description": "Received when a user is typing in a chat.",
+        "operationId": "receiveTyping",
+        "parameters": [
+          { "name": "userId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Event payload",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TypingEvent" },
+                "example": {
+                  "type": "TYPING",
+                  "chatId": "660e8400-e29b-41d4-a716-446655440001",
+                  "recipientId": "550e8400-e29b-41d4-a716-446655440000",
+                  "senderId": "990e8400-e29b-41d4-a716-446655440004"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/{userId}/queue/messages#REACT": {
+      "get": {
+        "tags": ["Receive Events"],
+        "summary": "REACT - Reaction Added",
+        "description": "Received when a reaction is added to a message. The `parentMessageId` is the message that was reacted to.",
+        "operationId": "receiveReact",
+        "parameters": [
+          { "name": "userId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Event payload",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ReactEvent" },
+                "example": {
+                  "type": "REACT",
+                  "messageId": "880e8400-e29b-41d4-a716-446655440003",
+                  "message": "👍",
+                  "chatId": "660e8400-e29b-41d4-a716-446655440001",
+                  "recipientId": "550e8400-e29b-41d4-a716-446655440000",
+                  "senderId": "990e8400-e29b-41d4-a716-446655440004",
+                  "parentMessageId": "770e8400-e29b-41d4-a716-446655440002",
+                  "timeStamp": "2024-01-15T10:32:00Z"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/{userId}/queue/messages#DELETE_REACT": {
+      "get": {
+        "tags": ["Receive Events"],
+        "summary": "DELETE_REACT - Reaction Removed",
+        "description": "Received when a reaction is removed from a message.",
+        "operationId": "receiveDeleteReact",
+        "parameters": [
+          { "name": "userId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Event payload",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/DeleteReactEvent" },
+                "example": {
+                  "type": "DELETE_REACT",
+                  "messageId": "880e8400-e29b-41d4-a716-446655440003",
+                  "chatId": "660e8400-e29b-41d4-a716-446655440001",
+                  "recipientId": "550e8400-e29b-41d4-a716-446655440000",
+                  "senderId": "990e8400-e29b-41d4-a716-446655440004"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/{userId}/queue/messages#READ_MSG": {
+      "get": {
+        "tags": ["Receive Events"],
+        "summary": "READ_MSG - Message Read",
+        "description": "Received when another user reads a message.",
+        "operationId": "receiveReadMsg",
+        "parameters": [
+          { "name": "userId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Event payload",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ReadMsgEvent" },
+                "example": {
+                  "type": "READ_MSG",
+                  "chatId": "660e8400-e29b-41d4-a716-446655440001",
+                  "recipientId": "550e8400-e29b-41d4-a716-446655440000",
+                  "senderId": "990e8400-e29b-41d4-a716-446655440004",
+                  "messageId": "770e8400-e29b-41d4-a716-446655440002"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/{userId}/queue/messages#USER_JOIN": {
+      "get": {
+        "tags": ["Receive Events"],
+        "summary": "USER_JOIN - User Joined Chat",
+        "description": "Received when a user is added to a chat. The `message` field contains the new user's ID.",
+        "operationId": "receiveUserJoin",
+        "parameters": [
+          { "name": "userId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Event payload",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UserJoinEvent" },
+                "example": {
+                  "type": "USER_JOIN",
+                  "chatId": "660e8400-e29b-41d4-a716-446655440001",
+                  "message": "aa0e8400-e29b-41d4-a716-446655440005",
+                  "username": "newuser",
+                  "recipientId": "550e8400-e29b-41d4-a716-446655440000",
+                  "senderId": "990e8400-e29b-41d4-a716-446655440004"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/{userId}/queue/messages#USER_LEAVE": {
+      "get": {
+        "tags": ["Receive Events"],
+        "summary": "USER_LEAVE - User Left Chat",
+        "description": "Received when a user leaves a chat.",
+        "operationId": "receiveUserLeave",
+        "parameters": [
+          { "name": "userId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Event payload",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UserLeaveEvent" },
+                "example": {
+                  "type": "USER_LEAVE",
+                  "chatId": "660e8400-e29b-41d4-a716-446655440001",
+                  "message": "johndoe left the Chat",
+                  "recipientId": "550e8400-e29b-41d4-a716-446655440000",
+                  "timeStamp": "2024-01-15T11:00:00Z",
+                  "senderId": "990e8400-e29b-41d4-a716-446655440004"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/{userId}/queue/messages#NEW_CHAT": {
+      "get": {
+        "tags": ["Receive Events"],
+        "summary": "NEW_CHAT - Chat Created",
+        "description": "Received when you're added to a new chat.",
+        "operationId": "receiveNewChat",
+        "parameters": [
+          { "name": "userId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Event payload",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/NewChatEvent" },
+                "example": {
+                  "type": "NEW_CHAT",
+                  "timeStamp": "2024-01-15T09:00:00Z",
+                  "chatId": "660e8400-e29b-41d4-a716-446655440001",
+                  "recipientId": "550e8400-e29b-41d4-a716-446655440000",
+                  "senderId": "990e8400-e29b-41d4-a716-446655440004",
+                  "message": "Project Discussion"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/{userId}/queue/messages#DELETE_CHAT": {
+      "get": {
+        "tags": ["Receive Events"],
+        "summary": "DELETE_CHAT - Chat Deleted",
+        "description": "Received when a chat is deleted.",
+        "operationId": "receiveDeleteChat",
+        "parameters": [
+          { "name": "userId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Event payload",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/DeleteChatEvent" },
+                "example": {
+                  "type": "DELETE_CHAT",
+                  "chatId": "660e8400-e29b-41d4-a716-446655440001",
+                  "recipientId": "550e8400-e29b-41d4-a716-446655440000",
+                  "senderId": "990e8400-e29b-41d4-a716-446655440004"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/chat#SEND_MSG": {
+      "post": {
+        "tags": ["Send Payloads"],
+        "summary": "SEND_MSG - Send Message",
+        "description": "Send a new message to a chat.",
+        "operationId": "sendSendMsg",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/SendMsgPayload" },
+              "example": {
+                "type": "SEND_MSG",
+                "senderId": "550e8400-e29b-41d4-a716-446655440000",
+                "message": "Hello, world!",
+                "timeStamp": "2024-01-15T10:30:00Z",
+                "chatId": "660e8400-e29b-41d4-a716-446655440001"
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Message sent" } }
+      }
+    },
+    "/api/chat#EDIT_MSG": {
+      "post": {
+        "tags": ["Send Payloads"],
+        "summary": "EDIT_MSG - Edit Message",
+        "description": "Edit an existing message. The `timeStamp` is the time of editing.",
+        "operationId": "sendEditMsg",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/EditMsgPayload" },
+              "example": {
+                "type": "EDIT_MSG",
+                "senderId": "550e8400-e29b-41d4-a716-446655440000",
+                "message": "Hello, world! (edited)",
+                "messageId": "770e8400-e29b-41d4-a716-446655440002",
+                "chatId": "660e8400-e29b-41d4-a716-446655440001",
+                "timeStamp": "2024-01-15T10:35:00Z"
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Message edited" } }
+      }
+    },
+    "/api/chat#DELETE_MSG": {
+      "post": {
+        "tags": ["Send Payloads"],
+        "summary": "DELETE_MSG - Delete Message",
+        "description": "Delete a message.",
+        "operationId": "sendDeleteMsg",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/DeleteMsgPayload" },
+              "example": {
+                "type": "DELETE_MSG",
+                "senderId": "550e8400-e29b-41d4-a716-446655440000",
+                "chatId": "660e8400-e29b-41d4-a716-446655440001",
+                "messageId": "770e8400-e29b-41d4-a716-446655440002"
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Message deleted" } }
+      }
+    },
+    "/api/chat#REPLY": {
+      "post": {
+        "tags": ["Send Payloads"],
+        "summary": "REPLY - Reply to Message",
+        "description": "Reply to an existing message. The `messageId` is the ID of the message being replied to.",
+        "operationId": "sendReply",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ReplyPayload" },
+              "example": {
+                "type": "REPLY",
+                "senderId": "550e8400-e29b-41d4-a716-446655440000",
+                "chatId": "660e8400-e29b-41d4-a716-446655440001",
+                "messageId": "770e8400-e29b-41d4-a716-446655440002",
+                "message": "I agree with this!",
+                "timeStamp": "2024-01-15T10:33:00Z"
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Reply sent" } }
+      }
+    },
+    "/api/chat#TYPING": {
+      "post": {
+        "tags": ["Send Payloads"],
+        "summary": "TYPING - Typing Indicator",
+        "description": "Indicate that you're typing in a chat.",
+        "operationId": "sendTyping",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/TypingPayload" },
+              "example": {
+                "type": "TYPING",
+                "senderId": "550e8400-e29b-41d4-a716-446655440000",
+                "chatId": "660e8400-e29b-41d4-a716-446655440001"
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Typing indicator sent" } }
+      }
+    },
+    "/api/chat#REACT": {
+      "post": {
+        "tags": ["Send Payloads"],
+        "summary": "REACT - Add Reaction",
+        "description": "Add a reaction to a message. Re-reacting overwrites the previous reaction.",
+        "operationId": "sendReact",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ReactPayload" },
+              "example": {
+                "type": "REACT",
+                "senderId": "550e8400-e29b-41d4-a716-446655440000",
+                "chatId": "660e8400-e29b-41d4-a716-446655440001",
+                "messageId": "770e8400-e29b-41d4-a716-446655440002",
+                "reaction": "👍",
+                "timeStamp": "2024-01-15T10:32:00Z"
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Reaction added" } }
+      }
+    },
+    "/api/chat#DELETE_REACT": {
+      "post": {
+        "tags": ["Send Payloads"],
+        "summary": "DELETE_REACT - Remove Reaction",
+        "description": "Remove a reaction. The `reactionId` can be found in `/getMessages` response or in the REACT event.",
+        "operationId": "sendDeleteReact",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/DeleteReactPayload" },
+              "example": {
+                "type": "DELETE_REACT",
+                "senderId": "550e8400-e29b-41d4-a716-446655440000",
+                "reactionId": "880e8400-e29b-41d4-a716-446655440003"
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Reaction removed" } }
+      }
+    },
+    "/api/chat#READ_MSG": {
+      "post": {
+        "tags": ["Send Payloads"],
+        "summary": "READ_MSG - Mark as Read",
+        "description": "Send a read receipt. Use when viewing a chat without calling `/getMessages` (which auto-triggers a read), or when a new message arrives while viewing.",
+        "operationId": "sendReadMsg",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ReadMsgPayload" },
+              "example": {
+                "type": "READ_MSG",
+                "senderId": "550e8400-e29b-41d4-a716-446655440000",
+                "chatId": "660e8400-e29b-41d4-a716-446655440001",
+                "messageId": "770e8400-e29b-41d4-a716-446655440002"
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Read receipt sent" } }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "SendMsgEvent": {
+        "type": "object",
+        "description": "New message event",
+        "properties": {
+          "type": { "type": "string", "enum": ["SEND_MSG"] },
+          "timeStamp": { "type": "string", "format": "date-time" },
+          "chatId": { "type": "string", "format": "uuid" },
+          "message": { "type": "string" },
+          "messageId": { "type": "string", "format": "uuid" },
+          "recipientId": { "type": "string", "format": "uuid" },
+          "senderId": { "type": "string", "format": "uuid" }
+        }
+      },
+      "EditMsgEvent": {
+        "type": "object",
+        "description": "Message edited event",
+        "properties": {
+          "type": { "type": "string", "enum": ["EDIT_MSG"] },
+          "chatId": { "type": "string", "format": "uuid" },
+          "message": { "type": "string" },
+          "messageId": { "type": "string", "format": "uuid" },
+          "recipientId": { "type": "string", "format": "uuid" },
+          "senderId": { "type": "string", "format": "uuid" },
+          "editedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "DeleteMsgEvent": {
+        "type": "object",
+        "description": "Message deleted event",
+        "properties": {
+          "type": { "type": "string", "enum": ["DELETE_MSG"] },
+          "chatId": { "type": "string", "format": "uuid" },
+          "messageId": { "type": "string", "format": "uuid" },
+          "recipientId": { "type": "string", "format": "uuid" },
+          "senderId": { "type": "string", "format": "uuid" },
+          "timeStamp": { "type": "string", "format": "date-time" }
+        }
+      },
+      "ReplyEvent": {
+        "type": "object",
+        "description": "Reply received event",
+        "properties": {
+          "type": { "type": "string", "enum": ["REPLY"] },
+          "messageId": { "type": "string", "format": "uuid" },
+          "message": { "type": "string" },
+          "chatId": { "type": "string", "format": "uuid" },
+          "recipientId": { "type": "string", "format": "uuid" },
+          "senderId": { "type": "string", "format": "uuid" },
+          "replyTo": { "$ref": "#/components/schemas/ReplyToMessage" },
+          "timeStamp": { "type": "string", "format": "date-time" }
+        }
+      },
+      "TypingEvent": {
+        "type": "object",
+        "description": "User typing event",
+        "properties": {
+          "type": { "type": "string", "enum": ["TYPING"] },
+          "chatId": { "type": "string", "format": "uuid" },
+          "recipientId": { "type": "string", "format": "uuid" },
+          "senderId": { "type": "string", "format": "uuid" }
+        }
+      },
+      "ReactEvent": {
+        "type": "object",
+        "description": "Reaction added event",
+        "properties": {
+          "type": { "type": "string", "enum": ["REACT"] },
+          "messageId": { "type": "string", "format": "uuid", "description": "Reaction ID (for deletion)" },
+          "message": { "type": "string", "description": "Reaction emoji" },
+          "chatId": { "type": "string", "format": "uuid" },
+          "recipientId": { "type": "string", "format": "uuid" },
+          "senderId": { "type": "string", "format": "uuid" },
+          "parentMessageId": { "type": "string", "format": "uuid", "description": "Message that was reacted to" },
+          "timeStamp": { "type": "string", "format": "date-time" }
+        }
+      },
+      "DeleteReactEvent": {
+        "type": "object",
+        "description": "Reaction removed event",
+        "properties": {
+          "type": { "type": "string", "enum": ["DELETE_REACT"] },
+          "messageId": { "type": "string", "format": "uuid", "description": "Reaction ID" },
+          "chatId": { "type": "string", "format": "uuid" },
+          "recipientId": { "type": "string", "format": "uuid" },
+          "senderId": { "type": "string", "format": "uuid" }
+        }
+      },
+      "ReadMsgEvent": {
+        "type": "object",
+        "description": "Message read event",
+        "properties": {
+          "type": { "type": "string", "enum": ["READ_MSG"] },
+          "chatId": { "type": "string", "format": "uuid" },
+          "recipientId": { "type": "string", "format": "uuid" },
+          "senderId": { "type": "string", "format": "uuid" },
+          "messageId": { "type": "string", "format": "uuid" }
+        }
+      },
+      "UserJoinEvent": {
+        "type": "object",
+        "description": "User joined chat event",
+        "properties": {
+          "type": { "type": "string", "enum": ["USER_JOIN"] },
+          "chatId": { "type": "string", "format": "uuid" },
+          "message": { "type": "string", "format": "uuid", "description": "New user's ID" },
+          "username": { "type": "string", "description": "New user's username" },
+          "recipientId": { "type": "string", "format": "uuid" },
+          "senderId": { "type": "string", "format": "uuid" }
+        }
+      },
+      "UserLeaveEvent": {
+        "type": "object",
+        "description": "User left chat event",
+        "properties": {
+          "type": { "type": "string", "enum": ["USER_LEAVE"] },
+          "chatId": { "type": "string", "format": "uuid" },
+          "message": { "type": "string", "description": "Leave message" },
+          "recipientId": { "type": "string", "format": "uuid" },
+          "timeStamp": { "type": "string", "format": "date-time" },
+          "senderId": { "type": "string", "format": "uuid" }
+        }
+      },
+      "NewChatEvent": {
+        "type": "object",
+        "description": "New chat created event",
+        "properties": {
+          "type": { "type": "string", "enum": ["NEW_CHAT"] },
+          "timeStamp": { "type": "string", "format": "date-time" },
+          "chatId": { "type": "string", "format": "uuid" },
+          "recipientId": { "type": "string", "format": "uuid" },
+          "senderId": { "type": "string", "format": "uuid" },
+          "message": { "type": "string", "description": "Chat name" }
+        }
+      },
+      "DeleteChatEvent": {
+        "type": "object",
+        "description": "Chat deleted event",
+        "properties": {
+          "type": { "type": "string", "enum": ["DELETE_CHAT"] },
+          "chatId": { "type": "string", "format": "uuid" },
+          "recipientId": { "type": "string", "format": "uuid" },
+          "senderId": { "type": "string", "format": "uuid" }
+        }
+      },
+      "ReplyToMessage": {
+        "type": "object",
+        "description": "Original message being replied to",
+        "properties": {
+          "chatId": { "type": "string", "format": "uuid" },
+          "timeStamp": { "type": "string", "format": "date-time" },
+          "messageId": { "type": "string", "format": "uuid" },
+          "senderId": { "type": "string", "format": "uuid" },
+          "content": { "type": "string" },
+          "edited": { "type": "boolean" },
+          "editedAt": { "type": "string", "format": "date-time", "nullable": true }
+        }
+      },
+      "SendMsgPayload": {
+        "type": "object",
+        "required": ["type", "senderId", "message", "timeStamp", "chatId"],
+        "properties": {
+          "type": { "type": "string", "enum": ["SEND_MSG"] },
+          "senderId": { "type": "string", "format": "uuid" },
+          "message": { "type": "string" },
+          "timeStamp": { "type": "string", "format": "date-time" },
+          "chatId": { "type": "string", "format": "uuid" }
+        }
+      },
+      "EditMsgPayload": {
+        "type": "object",
+        "required": ["type", "senderId", "message", "messageId", "chatId", "timeStamp"],
+        "properties": {
+          "type": { "type": "string", "enum": ["EDIT_MSG"] },
+          "senderId": { "type": "string", "format": "uuid" },
+          "message": { "type": "string" },
+          "messageId": { "type": "string", "format": "uuid" },
+          "chatId": { "type": "string", "format": "uuid" },
+          "timeStamp": { "type": "string", "format": "date-time" }
+        }
+      },
+      "DeleteMsgPayload": {
+        "type": "object",
+        "required": ["type", "senderId", "chatId", "messageId"],
+        "properties": {
+          "type": { "type": "string", "enum": ["DELETE_MSG"] },
+          "senderId": { "type": "string", "format": "uuid" },
+          "chatId": { "type": "string", "format": "uuid" },
+          "messageId": { "type": "string", "format": "uuid" }
+        }
+      },
+      "ReplyPayload": {
+        "type": "object",
+        "required": ["type", "senderId", "chatId", "messageId", "message", "timeStamp"],
+        "properties": {
+          "type": { "type": "string", "enum": ["REPLY"] },
+          "senderId": { "type": "string", "format": "uuid" },
+          "chatId": { "type": "string", "format": "uuid" },
+          "messageId": { "type": "string", "format": "uuid", "description": "ID of message being replied to" },
+          "message": { "type": "string" },
+          "timeStamp": { "type": "string", "format": "date-time" }
+        }
+      },
+      "TypingPayload": {
+        "type": "object",
+        "required": ["type", "senderId", "chatId"],
+        "properties": {
+          "type": { "type": "string", "enum": ["TYPING"] },
+          "senderId": { "type": "string", "format": "uuid" },
+          "chatId": { "type": "string", "format": "uuid" }
+        }
+      },
+      "ReactPayload": {
+        "type": "object",
+        "required": ["type", "senderId", "chatId", "messageId", "reaction", "timeStamp"],
+        "properties": {
+          "type": { "type": "string", "enum": ["REACT"] },
+          "senderId": { "type": "string", "format": "uuid" },
+          "chatId": { "type": "string", "format": "uuid" },
+          "messageId": { "type": "string", "format": "uuid" },
+          "reaction": { "type": "string" },
+          "timeStamp": { "type": "string", "format": "date-time" }
+        }
+      },
+      "DeleteReactPayload": {
+        "type": "object",
+        "required": ["type", "senderId", "reactionId"],
+        "properties": {
+          "type": { "type": "string", "enum": ["DELETE_REACT"] },
+          "senderId": { "type": "string", "format": "uuid" },
+          "reactionId": { "type": "string", "format": "uuid" }
+        }
+      },
+      "ReadMsgPayload": {
+        "type": "object",
+        "required": ["type", "senderId", "chatId", "messageId"],
+        "properties": {
+          "type": { "type": "string", "enum": ["READ_MSG"] },
+          "senderId": { "type": "string", "format": "uuid" },
+          "chatId": { "type": "string", "format": "uuid" },
+          "messageId": { "type": "string", "format": "uuid" }
+        }
+      }
+    }
+  }
+}

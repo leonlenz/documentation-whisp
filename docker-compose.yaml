@@ -13,11 +13,11 @@ services:
           "sources": [
             { 
               "url": "https://raw.githubusercontent.com/leonlenz/documentation-whisp/refs/heads/main/openapi.json",
-              "name": "REST API"
+              "title": "REST API"
             },
             { 
-              "url": "https://raw.githubusercontent.com/leonlenz/documentation-whisp/refs/heads/main/asyncapi.json",
-              "name": "Real-Time Messaging"
+              "url": "https://raw.githubusercontent.com/leonlenz/documentation-whisp/refs/heads/main/websocket-api.json",
+              "title": "Real-Time Messaging"
             }
           ],
           "theme": "purple"

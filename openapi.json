@@ -3,13 +3,7 @@
   "info": {
     "title": "Whisp REST API",
     "version": "1.0.0",
-    "description": "Whisp REST API for integrating real-time messaging capabilities.\n\n## Authentication\n\nAll protected endpoints require a valid JSON Web Token (JWT) in the `Authorization` header.\n\n**Header format:** `Authorization: Bearer <JWT>`\n\nTokens expire and can be refreshed via `/api/auth/refresh`.\n\n## Real-Time Messaging\n\nFor WebSocket/STOMP real-time messaging documentation, see the **Whisp Real-Time Messaging API** specification.",
-    "contact": {
-      "name": "Whisp API Support"
-    },
-    "license": {
-      "name": "Proprietary"
-    }
+    "description": "REST API for the Whisp Chat platform.\n\n## Authentication\n\nAll protected endpoints require a valid JSON Web Token (JWT) in the `Authorization` header.\n\n**Header format:** `Authorization: Bearer <JWT>`\n\nTokens expire and can be refreshed via `/api/auth/refresh`.\n\n## Real-Time Messaging\n\nFor WebSocket/STOMP real-time messaging, see the **Whisp Real-Time Messaging** documentation."
   },
   "servers": [
     {
@@ -24,22 +18,10 @@
     }
   ],
   "tags": [
-    {
-      "name": "User",
-      "description": "User management operations"
-    },
-    {
-      "name": "Authentication",
-      "description": "Authentication and token management"
-    },
-    {
-      "name": "Chat",
-      "description": "Chat management operations"
-    },
-    {
-      "name": "Messages",
-      "description": "Message retrieval operations"
-    }
+    { "name": "User", "description": "User management operations" },
+    { "name": "Authentication", "description": "Authentication and token management" },
+    { "name": "Chat", "description": "Chat management operations" },
+    { "name": "Messages", "description": "Message retrieval operations" }
   ],
   "paths": {
     "/api/user/registerUser": {
@@ -49,18 +31,12 @@
         "description": "Registers a new user account.",
         "operationId": "registerUser",
         "security": [],
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/ApiKeyHeader"
-          }
-        ],
+        "parameters": [{ "$ref": "#/components/parameters/ApiKeyHeader" }],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RegisterUserRequest"
-              },
+              "schema": { "$ref": "#/components/schemas/RegisterUserRequest" },
               "example": {
                 "username": "johndoe",
                 "firstName": "John",
@@ -72,18 +48,10 @@
           }
         },
         "responses": {
-          "201": {
-            "description": "User created successfully."
-          },
+          "201": { "description": "User created successfully." },
           "400": {
             "description": "Invalid request - validation failed.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorMessage"
-                }
-              }
-            }
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorMessage" } } }
           }
         }
       }
@@ -95,22 +63,13 @@
         "description": "Authenticates a user and issues a JWT in the response header and a refresh token in the response body.",
         "operationId": "signIn",
         "security": [],
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/ApiKeyHeader"
-          }
-        ],
+        "parameters": [{ "$ref": "#/components/parameters/ApiKeyHeader" }],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SignInRequest"
-              },
-              "example": {
-                "username": "johndoe",
-                "password": "SecureP@ss123"
-              }
+              "schema": { "$ref": "#/components/schemas/SignInRequest" },
+              "example": { "username": "johndoe", "password": "SecureP@ss123" }
             }
           }
         },
@@ -119,41 +78,13 @@
             "description": "Successfully signed in.",
             "headers": {
               "Authorization": {
-                "description": "JWT token prefixed with \"Bearer \"",
-                "schema": {
-                  "type": "string",
-                  "example": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-                }
+                "description": "JWT token prefixed with `Bearer `",
+                "schema": { "type": "string", "example": "Bearer eyJhbGciOiJIUzI1NiJ9..." }
               }
             },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SignInResponse"
-                }
-              }
-            }
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SignInResponse" } } }
           },
-          "400": {
-            "description": "Invalid request body.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorMessage"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Invalid credentials.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorMessage"
-                }
-              }
-            }
-          }
+          "401": { "description": "Invalid credentials." }
         }
       }
     },
@@ -163,69 +94,26 @@
         "summary": "Change Username",
         "description": "Changes the authenticated user's username. A new JWT is returned in the Authorization header.",
         "operationId": "changeUsername",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/AuthorizationHeader"
-          }
-        ],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/AuthorizationHeader" }],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ChangeUsernameRequest"
-              },
-              "example": {
-                "newUsername": "johndoe_updated"
-              }
+              "schema": { "$ref": "#/components/schemas/ChangeUsernameRequest" },
+              "example": { "newUsername": "johndoe_updated" }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Username changed successfully. New JWT in Authorization header.",
+            "description": "Username changed successfully.",
             "headers": {
-              "Authorization": {
-                "description": "New JWT token reflecting the username change",
-                "schema": {
-                  "type": "string",
-                  "example": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-                }
-              }
+              "Authorization": { "description": "New JWT token", "schema": { "type": "string" } }
             }
           },
-          "400": {
-            "description": "Username has incorrect format or already exists.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorMessage"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Invalid or expired JWT.",
-            "headers": {
-              "WWW-Authenticate": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AuthErrorResponse"
-                }
-              }
-            }
-          }
+          "400": { "description": "Username has incorrect format or already exists." },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
         }
       }
     },
@@ -235,40 +123,11 @@
         "summary": "Delete User",
         "description": "Deletes the authenticated user including all their data and messages.",
         "operationId": "deleteUser",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/AuthorizationHeader"
-          }
-        ],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/AuthorizationHeader" }],
         "responses": {
-          "200": {
-            "description": "User deleted successfully."
-          },
-          "401": {
-            "description": "Invalid or expired JWT.",
-            "headers": {
-              "WWW-Authenticate": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AuthErrorResponse"
-                }
-              }
-            }
-          },
-          "5XX": {
-            "description": "Internal server error."
-          }
+          "200": { "description": "User deleted successfully." },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
         }
       }
     },
@@ -278,44 +137,14 @@
         "summary": "Get Current User",
         "description": "Fetches the authenticated user's information.",
         "operationId": "getUser",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/AuthorizationHeader"
-          }
-        ],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/AuthorizationHeader" }],
         "responses": {
           "200": {
             "description": "User information retrieved successfully.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UserInfo"
-                }
-              }
-            }
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UserInfo" } } }
           },
-          "401": {
-            "description": "Invalid or expired JWT.",
-            "headers": {
-              "WWW-Authenticate": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AuthErrorResponse"
-                }
-              }
-            }
-          }
+          "401": { "$ref": "#/components/responses/Unauthorized" }
         }
       }
     },
@@ -323,46 +152,16 @@
       "get": {
         "tags": ["User"],
         "summary": "Get WebSocket Ticket",
-        "description": "Fetches a ticket required to open a WebSocket connection.\n\n**Important:** This ticket is very short-lived (approximately 20 seconds by default). Use it immediately to establish the WebSocket connection.\n\nSee the **Whisp Real-Time Messaging API** specification for WebSocket connection details.",
+        "description": "Fetches a ticket required to open a WebSocket connection.\n\n**Important:** This ticket is very short-lived (~20 seconds). Use it immediately to establish the WebSocket connection.",
         "operationId": "getTicket",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/AuthorizationHeader"
-          }
-        ],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/AuthorizationHeader" }],
         "responses": {
           "200": {
             "description": "WebSocket ticket retrieved successfully.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TicketResponse"
-                }
-              }
-            }
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TicketResponse" } } }
           },
-          "401": {
-            "description": "Invalid or expired JWT.",
-            "headers": {
-              "WWW-Authenticate": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AuthErrorResponse"
-                }
-              }
-            }
-          }
+          "401": { "$ref": "#/components/responses/Unauthorized" }
         }
       }
     },
@@ -370,67 +169,31 @@
       "post": {
         "tags": ["Authentication"],
         "summary": "Refresh JWT",
-        "description": "Renews an expired JWT using a refresh token. The expired JWT must be included in the request body.",
+        "description": "Renews an expired JWT using a refresh token.",
         "operationId": "refreshToken",
         "security": [],
-        "parameters": [
-          {
-            "name": "Authorization",
-            "in": "header",
-            "required": true,
-            "description": "The refresh token with Bearer prefix. Format: `Bearer <refresh_token>`",
-            "schema": {
-              "type": "string",
-              "example": "Bearer dGhpcyBpcyBhIHJlZnJlc2ggdG9rZW4..."
-            }
-          }
-        ],
+        "parameters": [{
+          "name": "Authorization",
+          "in": "header",
+          "required": true,
+          "description": "The refresh token with Bearer prefix. Format: `Bearer <refresh_token>`",
+          "schema": { "type": "string", "example": "Bearer dGhpcyBpcyBhIHJlZnJlc2ggdG9rZW4..." }
+        }],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RefreshTokenRequest"
-              },
-              "example": {
-                "expiredJwt": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-              }
+              "schema": { "$ref": "#/components/schemas/RefreshTokenRequest" },
+              "example": { "expiredJwt": "eyJhbGciOiJIUzI1NiJ9..." }
             }
           }
         },
         "responses": {
           "200": {
             "description": "JWT refreshed successfully.",
-            "headers": {
-              "Authorization": {
-                "description": "New JWT token",
-                "schema": {
-                  "type": "string",
-                  "example": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-                }
-              }
-            }
+            "headers": { "Authorization": { "description": "New JWT token", "schema": { "type": "string" } } }
           },
-          "400": {
-            "description": "Invalid request body format."
-          },
-          "401": {
-            "description": "Invalid or expired refresh token.",
-            "headers": {
-              "WWW-Authenticate": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AuthErrorResponse"
-                }
-              }
-            }
-          }
+          "401": { "description": "Invalid or expired refresh token." }
         }
       }
     },
@@ -440,50 +203,20 @@
         "summary": "Logout",
         "description": "Invalidates a specific refresh token.",
         "operationId": "logout",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/AuthorizationHeader"
-          }
-        ],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/AuthorizationHeader" }],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/LogoutRequest"
-              },
-              "example": {
-                "refreshToken": "dGhpcyBpcyBhIHJlZnJlc2ggdG9rZW4..."
-              }
+              "schema": { "$ref": "#/components/schemas/LogoutRequest" },
+              "example": { "refreshToken": "dGhpcyBpcyBhIHJlZnJlc2ggdG9rZW4..." }
             }
           }
         },
         "responses": {
-          "200": {
-            "description": "Refresh token invalidated successfully."
-          },
-          "401": {
-            "description": "Invalid or expired JWT.",
-            "headers": {
-              "WWW-Authenticate": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AuthErrorResponse"
-                }
-              }
-            }
-          }
+          "200": { "description": "Refresh token invalidated successfully." },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
         }
       }
     },
@@ -491,39 +224,13 @@
       "post": {
         "tags": ["Authentication"],
         "summary": "Logout All Sessions",
-        "description": "Invalidates all refresh tokens for the authenticated user. This effectively logs out all active sessions across all devices.",
+        "description": "Invalidates all refresh tokens for the authenticated user.",
         "operationId": "logoutAll",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/AuthorizationHeader"
-          }
-        ],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/AuthorizationHeader" }],
         "responses": {
-          "200": {
-            "description": "All refresh tokens invalidated successfully."
-          },
-          "401": {
-            "description": "Invalid or expired JWT.",
-            "headers": {
-              "WWW-Authenticate": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AuthErrorResponse"
-                }
-              }
-            }
-          }
+          "200": { "description": "All refresh tokens invalidated successfully." },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
         }
       }
     },
@@ -533,68 +240,24 @@
         "summary": "Create Chat",
         "description": "Creates a new chat with two or more users.",
         "operationId": "createChat",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/AuthorizationHeader"
-          }
-        ],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/AuthorizationHeader" }],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateChatRequest"
-              },
-              "example": {
-                "chatName": "Project Discussion",
-                "userNames": ["johndoe", "janedoe", "bobsmith"]
-              }
+              "schema": { "$ref": "#/components/schemas/CreateChatRequest" },
+              "example": { "chatName": "Project Discussion", "userNames": ["johndoe", "janedoe", "bobsmith"] }
             }
           }
         },
         "responses": {
           "201": {
             "description": "Chat created successfully.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ChatDetails"
-                }
-              }
-            }
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ChatDetails" } } }
           },
-          "400": {
-            "description": "Bad request. Possible reasons:\n- Invalid usernames given\n- Own username not included in request\n- Chat name has invalid format",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorMessage"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Invalid or expired JWT.",
-            "headers": {
-              "WWW-Authenticate": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AuthErrorResponse"
-                }
-              }
-            }
-          }
+          "400": { "description": "Invalid usernames, own username not included, or invalid chat name format." },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
         }
       }
     },
@@ -604,67 +267,18 @@
         "summary": "List Chats",
         "description": "Returns all chats for the authenticated user with pagination support.",
         "operationId": "getChats",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
+        "security": [{ "bearerAuth": [] }],
         "parameters": [
-          {
-            "$ref": "#/components/parameters/AuthorizationHeader"
-          },
-          {
-            "name": "page",
-            "in": "query",
-            "description": "Page number (zero-based)",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 0,
-              "minimum": 0
-            }
-          },
-          {
-            "name": "size",
-            "in": "query",
-            "description": "Number of chats per page",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 20,
-              "minimum": 1,
-              "maximum": 100
-            }
-          }
+          { "$ref": "#/components/parameters/AuthorizationHeader" },
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 0 } },
+          { "name": "size", "in": "query", "schema": { "type": "integer", "default": 20 } }
         ],
         "responses": {
           "200": {
             "description": "List of chats retrieved successfully.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ChatsListResponse"
-                }
-              }
-            }
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ChatsListResponse" } } }
           },
-          "401": {
-            "description": "Invalid or expired JWT.",
-            "headers": {
-              "WWW-Authenticate": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AuthErrorResponse"
-                }
-              }
-            }
-          }
+          "401": { "$ref": "#/components/responses/Unauthorized" }
         }
       }
     },
@@ -674,61 +288,21 @@
         "summary": "Add User to Chat",
         "description": "Adds a user to an existing chat.",
         "operationId": "addUserToChat",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/AuthorizationHeader"
-          }
-        ],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/AuthorizationHeader" }],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AddUserRequest"
-              },
-              "example": {
-                "chatId": "550e8400-e29b-41d4-a716-446655440000",
-                "newUsername": "newuser"
-              }
+              "schema": { "$ref": "#/components/schemas/AddUserRequest" },
+              "example": { "chatId": "550e8400-e29b-41d4-a716-446655440000", "newUsername": "newuser" }
             }
           }
         },
         "responses": {
-          "200": {
-            "description": "User added to chat successfully."
-          },
-          "400": {
-            "description": "Bad request. Possible reasons:\n- User is not in given chat\n- New username is invalid\n- New user is already in chat\n- Chat does not exist",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorMessage"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Invalid or expired JWT.",
-            "headers": {
-              "WWW-Authenticate": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AuthErrorResponse"
-                }
-              }
-            }
-          }
+          "200": { "description": "User added to chat successfully." },
+          "400": { "description": "User not in chat, invalid username, user already in chat, or chat doesn't exist." },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
         }
       }
     },
@@ -736,66 +310,20 @@
       "get": {
         "tags": ["Chat"],
         "summary": "Get Users in Chat",
-        "description": "Lists all users in a chat including when they joined, their usernames, and the last message they have seen.",
+        "description": "Lists all users in a chat.",
         "operationId": "getChatUsers",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
+        "security": [{ "bearerAuth": [] }],
         "parameters": [
-          {
-            "$ref": "#/components/parameters/AuthorizationHeader"
-          },
-          {
-            "name": "chatId",
-            "in": "path",
-            "required": true,
-            "description": "ID of the chat to list users from",
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
+          { "$ref": "#/components/parameters/AuthorizationHeader" },
+          { "name": "chatId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
         ],
         "responses": {
           "200": {
             "description": "User list retrieved successfully.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ChatUsersResponse"
-                }
-              }
-            }
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ChatUsersResponse" } } }
           },
-          "400": {
-            "description": "Bad request. Possible reasons:\n- User is not in given chat\n- Chat does not exist",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorMessage"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Invalid or expired JWT.",
-            "headers": {
-              "WWW-Authenticate": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AuthErrorResponse"
-                }
-              }
-            }
-          }
+          "400": { "description": "User not in chat or chat doesn't exist." },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
         }
       }
     },
@@ -805,61 +333,21 @@
         "summary": "Change Chat Name",
         "description": "Changes the name of an existing chat.",
         "operationId": "changeChatName",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/AuthorizationHeader"
-          }
-        ],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/AuthorizationHeader" }],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ChangeChatNameRequest"
-              },
-              "example": {
-                "chatId": "550e8400-e29b-41d4-a716-446655440000",
-                "newChatName": "Updated Project Name"
-              }
+              "schema": { "$ref": "#/components/schemas/ChangeChatNameRequest" },
+              "example": { "chatId": "550e8400-e29b-41d4-a716-446655440000", "newChatName": "Updated Name" }
             }
           }
         },
         "responses": {
-          "200": {
-            "description": "Chat name changed successfully."
-          },
-          "400": {
-            "description": "Bad request. Possible reasons:\n- User is not in given chat\n- Chat does not exist",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorMessage"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Invalid or expired JWT.",
-            "headers": {
-              "WWW-Authenticate": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AuthErrorResponse"
-                }
-              }
-            }
-          }
+          "200": { "description": "Chat name changed successfully." },
+          "400": { "description": "User not in chat or chat doesn't exist." },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
         }
       }
     },
@@ -867,59 +355,17 @@
       "delete": {
         "tags": ["Chat"],
         "summary": "Delete Chat",
-        "description": "Deletes a chat. Only the creator of the chat can perform this action.",
+        "description": "Deletes a chat. Only the creator can perform this action.",
         "operationId": "deleteChat",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
+        "security": [{ "bearerAuth": [] }],
         "parameters": [
-          {
-            "$ref": "#/components/parameters/AuthorizationHeader"
-          },
-          {
-            "name": "chatId",
-            "in": "query",
-            "required": true,
-            "description": "ID of the chat to delete",
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
+          { "$ref": "#/components/parameters/AuthorizationHeader" },
+          { "name": "chatId", "in": "query", "required": true, "schema": { "type": "string", "format": "uuid" } }
         ],
         "responses": {
-          "200": {
-            "description": "Chat deleted successfully."
-          },
-          "400": {
-            "description": "Bad request. Possible reasons:\n- User is not in given chat\n- Chat does not exist\n- User is not the creator",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorMessage"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Invalid or expired JWT.",
-            "headers": {
-              "WWW-Authenticate": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AuthErrorResponse"
-                }
-              }
-            }
-          }
+          "200": { "description": "Chat deleted successfully." },
+          "400": { "description": "User not in chat, not the creator, or chat doesn't exist." },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
         }
       }
     },
@@ -927,63 +373,23 @@
       "post": {
         "tags": ["Chat"],
         "summary": "Remove User from Chat",
-        "description": "Removes a user from a chat (user leaves the chat). If the creator leaves, ownership transfers to the longest-tenured member.\n\n**Note:** Currently, a user can only remove themselves from a chat.",
+        "description": "Removes a user from a chat (leave chat). If the creator leaves, ownership transfers to the longest-tenured member.",
         "operationId": "removeUserFromChat",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/AuthorizationHeader"
-          }
-        ],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/AuthorizationHeader" }],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RemoveUserRequest"
-              },
-              "example": {
-                "chatId": "550e8400-e29b-41d4-a716-446655440000",
-                "removeUser": "660e8400-e29b-41d4-a716-446655440001"
-              }
+              "schema": { "$ref": "#/components/schemas/RemoveUserRequest" },
+              "example": { "chatId": "550e8400-e29b-41d4-a716-446655440000", "removeUser": "660e8400-e29b-41d4-a716-446655440001" }
             }
           }
         },
         "responses": {
-          "200": {
-            "description": "User removed from chat successfully."
-          },
-          "400": {
-            "description": "Bad request. Possible reasons:\n- User is not in given chat\n- Request was not made by the actual leaving user",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorMessage"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Invalid or expired JWT.",
-            "headers": {
-              "WWW-Authenticate": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AuthErrorResponse"
-                }
-              }
-            }
-          }
+          "200": { "description": "User removed from chat successfully." },
+          "400": { "description": "User not in chat or not authorized to remove." },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
         }
       }
     },
@@ -991,88 +397,22 @@
       "get": {
         "tags": ["Messages"],
         "summary": "Get Messages",
-        "description": "Fetches messages for a specific chat with pagination support.\n\n**Note:** Calling this endpoint automatically triggers a read receipt on the last message in the chat.",
+        "description": "Fetches messages for a specific chat with pagination.\n\n**Note:** This endpoint automatically triggers a read receipt on the last message.",
         "operationId": "getMessages",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
+        "security": [{ "bearerAuth": [] }],
         "parameters": [
-          {
-            "$ref": "#/components/parameters/AuthorizationHeader"
-          },
-          {
-            "name": "chatId",
-            "in": "path",
-            "required": true,
-            "description": "ID of the chat to fetch messages from",
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "size",
-            "in": "query",
-            "description": "Number of messages to retrieve",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 50,
-              "minimum": 1,
-              "maximum": 100
-            }
-          },
-          {
-            "name": "lastMessage",
-            "in": "query",
-            "description": "Message ID for cursor-based pagination (fetch messages before this ID)",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
+          { "$ref": "#/components/parameters/AuthorizationHeader" },
+          { "name": "chatId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "name": "size", "in": "query", "schema": { "type": "integer", "default": 50 } },
+          { "name": "lastMessage", "in": "query", "description": "Message ID for cursor-based pagination", "schema": { "type": "string", "format": "uuid" } }
         ],
         "responses": {
           "200": {
             "description": "Messages retrieved successfully.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MessagesResponse"
-                }
-              }
-            }
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MessagesResponse" } } }
           },
-          "400": {
-            "description": "User is not in the given chat or chat does not exist.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorMessage"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Invalid or expired JWT.",
-            "headers": {
-              "WWW-Authenticate": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AuthErrorResponse"
-                }
-              }
-            }
-          }
+          "400": { "description": "User not in chat or chat doesn't exist." },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
         }
       }
     }
@@ -1083,13 +423,13 @@
         "type": "http",
         "scheme": "bearer",
         "bearerFormat": "JWT",
-        "description": "JWT token obtained from sign-in or refresh endpoints. Include in the `Authorization` header as `Bearer <JWT>`."
+        "description": "JWT token. Include as `Authorization: Bearer <JWT>`"
       },
       "apiKey": {
         "type": "apiKey",
         "in": "header",
         "name": "x-api-key",
-        "description": "API key for unauthenticated endpoints (registration, sign-in)"
+        "description": "API key for unauthenticated endpoints"
       }
     },
     "parameters": {
@@ -1098,19 +438,21 @@
         "in": "header",
         "required": true,
         "description": "API key for authentication",
-        "schema": {
-          "type": "string"
-        }
+        "schema": { "type": "string" }
       },
       "AuthorizationHeader": {
         "name": "Authorization",
         "in": "header",
         "required": true,
         "description": "JWT Bearer token. Format: `Bearer <JWT>`",
-        "schema": {
-          "type": "string",
-          "example": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-        }
+        "schema": { "type": "string", "example": "Bearer eyJhbGciOiJIUzI1NiJ9..." }
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "Invalid or expired JWT.",
+        "headers": { "WWW-Authenticate": { "schema": { "type": "string" } } },
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AuthErrorResponse" } } }
       }
     },
     "schemas": {
@@ -1118,443 +460,172 @@
         "type": "object",
         "required": ["username", "email", "password"],
         "properties": {
-          "username": {
-            "type": "string",
-            "description": "Unique username",
-            "minLength": 3,
-            "maxLength": 50
-          },
-          "firstName": {
-            "type": "string",
-            "description": "User's first name (optional)"
-          },
-          "surName": {
-            "type": "string",
-            "description": "User's surname/last name (optional)"
-          },
-          "email": {
-            "type": "string",
-            "format": "email",
-            "description": "User's email address"
-          },
-          "password": {
-            "type": "string",
-            "format": "password",
-            "description": "User's password",
-            "minLength": 8
-          }
+          "username": { "type": "string", "minLength": 3, "maxLength": 50 },
+          "firstName": { "type": "string", "description": "Optional" },
+          "surName": { "type": "string", "description": "Optional" },
+          "email": { "type": "string", "format": "email" },
+          "password": { "type": "string", "format": "password", "minLength": 8 }
         }
       },
       "SignInRequest": {
         "type": "object",
         "required": ["username", "password"],
         "properties": {
-          "username": {
-            "type": "string",
-            "description": "Username"
-          },
-          "password": {
-            "type": "string",
-            "format": "password",
-            "description": "Password"
-          }
+          "username": { "type": "string" },
+          "password": { "type": "string", "format": "password" }
         }
       },
       "ChangeUsernameRequest": {
         "type": "object",
         "required": ["newUsername"],
-        "properties": {
-          "newUsername": {
-            "type": "string",
-            "description": "The new username",
-            "minLength": 3,
-            "maxLength": 50
-          }
-        }
+        "properties": { "newUsername": { "type": "string", "minLength": 3, "maxLength": 50 } }
       },
       "RefreshTokenRequest": {
         "type": "object",
         "required": ["expiredJwt"],
-        "properties": {
-          "expiredJwt": {
-            "type": "string",
-            "description": "The expired JWT token to be refreshed"
-          }
-        }
+        "properties": { "expiredJwt": { "type": "string" } }
       },
       "LogoutRequest": {
         "type": "object",
         "required": ["refreshToken"],
-        "properties": {
-          "refreshToken": {
-            "type": "string",
-            "description": "The refresh token to invalidate"
-          }
-        }
+        "properties": { "refreshToken": { "type": "string" } }
       },
       "CreateChatRequest": {
         "type": "object",
         "required": ["chatName", "userNames"],
         "properties": {
-          "chatName": {
-            "type": "string",
-            "description": "Name of the chat"
-          },
-          "userNames": {
-            "type": "array",
-            "description": "List of usernames to include in the chat (must include own username)",
-            "items": {
-              "type": "string"
-            },
-            "minItems": 2
-          }
+          "chatName": { "type": "string" },
+          "userNames": { "type": "array", "items": { "type": "string" }, "minItems": 2 }
         }
       },
       "AddUserRequest": {
         "type": "object",
         "required": ["chatId", "newUsername"],
         "properties": {
-          "chatId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "ID of the chat"
-          },
-          "newUsername": {
-            "type": "string",
-            "description": "Username of the user to add"
-          }
+          "chatId": { "type": "string", "format": "uuid" },
+          "newUsername": { "type": "string" }
         }
       },
       "ChangeChatNameRequest": {
         "type": "object",
         "required": ["chatId", "newChatName"],
         "properties": {
-          "chatId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "ID of the chat"
-          },
-          "newChatName": {
-            "type": "string",
-            "description": "New name for the chat"
-          }
+          "chatId": { "type": "string", "format": "uuid" },
+          "newChatName": { "type": "string" }
         }
       },
       "RemoveUserRequest": {
         "type": "object",
         "required": ["chatId", "removeUser"],
         "properties": {
-          "chatId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "ID of the chat"
-          },
-          "removeUser": {
-            "type": "string",
-            "format": "uuid",
-            "description": "User ID of the user to remove (must be own ID)"
-          }
+          "chatId": { "type": "string", "format": "uuid" },
+          "removeUser": { "type": "string", "format": "uuid" }
         }
       },
       "SignInResponse": {
         "type": "object",
         "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "description": "User's unique identifier"
-          },
-          "username": {
-            "type": "string",
-            "description": "User's username"
-          },
-          "email": {
-            "type": "string",
-            "format": "email",
-            "description": "User's email address"
-          },
-          "refreshToken": {
-            "type": "string",
-            "description": "Refresh token for obtaining new JWTs"
-          },
-          "roles": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "enum": ["USER", "ADMIN"]
-            },
-            "description": "User's roles"
-          }
+          "id": { "type": "string", "format": "uuid" },
+          "username": { "type": "string" },
+          "email": { "type": "string", "format": "email" },
+          "refreshToken": { "type": "string" },
+          "roles": { "type": "array", "items": { "type": "string", "enum": ["USER", "ADMIN"] } }
         }
       },
       "UserInfo": {
         "type": "object",
         "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "description": "User's unique identifier"
-          },
-          "username": {
-            "type": "string",
-            "description": "User's username"
-          },
-          "email": {
-            "type": "string",
-            "format": "email",
-            "description": "User's email address"
-          },
-          "role": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "enum": ["USER", "ADMIN"]
-            },
-            "description": "User's roles"
-          }
+          "id": { "type": "string", "format": "uuid" },
+          "username": { "type": "string" },
+          "email": { "type": "string", "format": "email" },
+          "role": { "type": "array", "items": { "type": "string", "enum": ["USER", "ADMIN"] } }
         }
       },
       "TicketResponse": {
         "type": "object",
-        "properties": {
-          "ticket": {
-            "type": "string",
-            "description": "Short-lived ticket for WebSocket connection (valid ~20 seconds)"
-          }
-        }
+        "properties": { "ticket": { "type": "string", "description": "Short-lived ticket (~20 seconds)" } }
       },
       "ChatDetails": {
         "type": "object",
         "properties": {
-          "chatId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Unique chat identifier"
-          },
-          "chatName": {
-            "type": "string",
-            "description": "Name of the chat"
-          },
-          "lastMessageTimestamp": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Timestamp of the last message (ISO 8601)"
-          },
-          "lastMessage": {
-            "type": "string",
-            "description": "Content of the last message"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Chat creation timestamp (ISO 8601)"
-          },
-          "creator": {
-            "type": "string",
-            "format": "uuid",
-            "description": "User ID of the chat creator"
-          },
-          "groupChat": {
-            "type": "boolean",
-            "description": "Whether this is a group chat (more than 2 users)"
-          }
+          "chatId": { "type": "string", "format": "uuid" },
+          "chatName": { "type": "string" },
+          "lastMessageTimestamp": { "type": "string", "format": "date-time" },
+          "lastMessage": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "creator": { "type": "string", "format": "uuid" },
+          "groupChat": { "type": "boolean" }
         }
       },
       "ChatsListResponse": {
         "type": "object",
-        "properties": {
-          "chats": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ChatDetails"
-            }
-          }
-        }
+        "properties": { "chats": { "type": "array", "items": { "$ref": "#/components/schemas/ChatDetails" } } }
       },
       "ChatUserInfo": {
         "type": "object",
         "properties": {
-          "userId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "User's unique identifier"
-          },
-          "username": {
-            "type": "string",
-            "description": "User's username"
-          },
-          "joinedChatAt": {
-            "type": "string",
-            "format": "date-time",
-            "description": "When the user joined the chat (ISO 8601)"
-          },
-          "lastSeenMessage": {
-            "type": "string",
-            "format": "uuid",
-            "description": "ID of the last message the user has seen"
-          }
+          "userId": { "type": "string", "format": "uuid" },
+          "username": { "type": "string" },
+          "joinedChatAt": { "type": "string", "format": "date-time" },
+          "lastSeenMessage": { "type": "string", "format": "uuid" }
         }
       },
       "ChatUsersResponse": {
         "type": "object",
-        "properties": {
-          "users": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ChatUserInfo"
-            }
-          }
-        }
+        "properties": { "users": { "type": "array", "items": { "$ref": "#/components/schemas/ChatUserInfo" } } }
       },
       "Reaction": {
         "type": "object",
         "properties": {
-          "reactionId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Unique reaction identifier"
-          },
-          "chatId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Chat ID where the reaction occurred"
-          },
-          "messageId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "ID of the message being reacted to"
-          },
-          "senderId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "User ID who made the reaction"
-          },
-          "reaction": {
-            "type": "string",
-            "description": "Reaction type or emoji"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time",
-            "description": "When the reaction was created (ISO 8601)"
-          }
+          "reactionId": { "type": "string", "format": "uuid" },
+          "chatId": { "type": "string", "format": "uuid" },
+          "messageId": { "type": "string", "format": "uuid" },
+          "senderId": { "type": "string", "format": "uuid" },
+          "reaction": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" }
         }
       },
       "MessageContent": {
         "type": "object",
         "properties": {
-          "chatId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Chat ID"
-          },
-          "timeStamp": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Message timestamp (ISO 8601)"
-          },
-          "messageId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Unique message identifier"
-          },
-          "senderId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "User ID of the sender"
-          },
-          "content": {
-            "type": "string",
-            "description": "Message content"
-          },
-          "edited": {
-            "type": "boolean",
-            "description": "Whether the message has been edited"
-          },
-          "editedAt": {
-            "type": "string",
-            "format": "date-time",
-            "description": "When the message was last edited (ISO 8601)",
-            "nullable": true
-          }
+          "chatId": { "type": "string", "format": "uuid" },
+          "timeStamp": { "type": "string", "format": "date-time" },
+          "messageId": { "type": "string", "format": "uuid" },
+          "senderId": { "type": "string", "format": "uuid" },
+          "content": { "type": "string" },
+          "edited": { "type": "boolean" },
+          "editedAt": { "type": "string", "format": "date-time", "nullable": true }
         }
       },
       "Message": {
         "allOf": [
-          {
-            "$ref": "#/components/schemas/MessageContent"
-          },
+          { "$ref": "#/components/schemas/MessageContent" },
           {
             "type": "object",
             "properties": {
-              "replyTo": {
-                "allOf": [
-                  {
-                    "$ref": "#/components/schemas/MessageContent"
-                  }
-                ],
-                "nullable": true,
-                "description": "The message this is a reply to (null if not a reply)"
-              },
-              "reactions": {
-                "type": "array",
-                "items": {
-                  "$ref": "#/components/schemas/Reaction"
-                },
-                "description": "Reactions to this message"
-              }
+              "replyTo": { "$ref": "#/components/schemas/MessageContent", "nullable": true },
+              "reactions": { "type": "array", "items": { "$ref": "#/components/schemas/Reaction" } }
             }
           }
         ]
       },
       "MessagesResponse": {
         "type": "object",
-        "properties": {
-          "messages": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Message"
-            }
-          }
-        }
+        "properties": { "messages": { "type": "array", "items": { "$ref": "#/components/schemas/Message" } } }
       },
       "ErrorMessage": {
         "type": "object",
-        "properties": {
-          "message": {
-            "type": "string",
-            "description": "Error message describing what went wrong"
-          }
-        }
+        "properties": { "message": { "type": "string" } }
       },
       "AuthErrorResponse": {
         "type": "object",
-        "description": "Authentication error response (returned with WWW-Authenticate header)",
         "properties": {
-          "type": {
-            "type": "string",
-            "description": "Error type"
-          },
-          "title": {
-            "type": "string",
-            "description": "Error title"
-          },
-          "status": {
-            "type": "string",
-            "description": "HTTP status"
-          },
-          "detail": {
-            "type": "string",
-            "description": "Detailed error description"
-          },
-          "instance": {
-            "type": "string",
-            "description": "Instance identifier"
-          },
-          "code": {
-            "type": "string",
-            "description": "Error code"
-          }
+          "type": { "type": "string" },
+          "title": { "type": "string" },
+          "status": { "type": "string" },
+          "detail": { "type": "string" },
+          "instance": { "type": "string" },
+          "code": { "type": "string" }
         }
       }
     }
