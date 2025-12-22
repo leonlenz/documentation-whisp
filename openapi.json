@@ -1,9 +1,9 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Whisp Real-Time Chat API",
+    "title": "Whisp REST API",
     "version": "1.0.0",
-    "description": "Whisp Real-Time Chat API for integrating real-time messaging capabilities.\n\n## Authentication\nAll protected endpoints require a valid JSON Web Token (JWT) in the `Authorization` header.\nTokens expire and can be refreshed via `/api/auth/refresh`.\n\n## Real-Time Messaging\nFor WebSocket/STOMP real-time messaging documentation, see the **Whisp AsyncAPI** specification.",
+    "description": "Whisp REST API for integrating real-time messaging capabilities.\n\n## Authentication\n\nAll protected endpoints require a valid JSON Web Token (JWT) in the `Authorization` header.\n\n**Header format:** `Authorization: Bearer <JWT>`\n\nTokens expire and can be refreshed via `/api/auth/refresh`.\n\n## Real-Time Messaging\n\nFor WebSocket/STOMP real-time messaging documentation, see the **Whisp Real-Time Messaging API** specification.",
     "contact": {
       "name": "Whisp API Support"
     },
@@ -358,10 +358,10 @@
             "name": "Authorization",
             "in": "header",
             "required": true,
-            "description": "The refresh token (without Bearer prefix)",
+            "description": "The refresh token with Bearer prefix (e.g., `Bearer <refresh_token>`)",
             "schema": {
               "type": "string",
-              "example": "dGhpcyBpcyBhIHJlZnJlc2ggdG9rZW4..."
+              "example": "Bearer dGhpcyBpcyBhIHJlZnJlc2ggdG9rZW4..."
             }
           }
         ],
@@ -1021,7 +1021,7 @@
         "type": "http",
         "scheme": "bearer",
         "bearerFormat": "JWT",
-        "description": "JWT token obtained from sign-in or refresh endpoints"
+        "description": "JWT token obtained from sign-in or refresh endpoints. Include in the `Authorization` header as `Bearer <JWT>`. Required for all protected endpoints."
       },
       "apiKey": {
         "type": "apiKey",
@@ -1044,7 +1044,7 @@
     "schemas": {
       "RegisterUserRequest": {
         "type": "object",
-        "required": ["username", "firstName", "surName", "email", "password"],
+        "required": ["username", "email", "password"],
         "properties": {
           "username": {
             "type": "string",
