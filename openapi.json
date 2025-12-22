@@ -3,10 +3,13 @@
   "info": {
     "title": "Whisp Real-Time Chat API",
     "version": "1.0.0",
-    "description": "Real-time chat API with REST endpoints and WebSocket support for instant messaging.\n\n## Base URL\n`https://<client-domain>.api.whispchat.com`\n\n## Authentication\nAll protected endpoints require a valid JSON Web Token (JWT) in the Authorization header.\nTokens expire and can be refreshed via `/api/auth/refresh`.\n\n## WebSocket Connection\nReal-time messaging uses STOMP protocol over WebSocket at `wss://<client-domain>.api.whispchat.com/api/wsConnect`.\nSee the WebSocket section below for detailed protocol documentation.\n",
+    "description": "Whisp Real-Time Chat API for integrating real-time messaging capabilities.\n\n## Authentication\nAll protected endpoints require a valid JSON Web Token (JWT) in the `Authorization` header.\nTokens expire and can be refreshed via `/api/auth/refresh`.\n\n## WebSocket (STOMP) Connection\nThe real-time channel uses the STOMP protocol over WebSocket. See the dedicated \nWebSocket section below for connection details and message formats.\n\n### Connecting to WebSocket\n1. Obtain a ticket from `GET /api/user/getTicket`\n2. Connect to `wss://<client-domain>.api.whispchat.com/api/wsConnect?ticket=<ticket>`\n3. Include STOMP header: `Authorization: Bearer <JWT>`\n4. Subscribe to `/user/{userId}/queue/messages` to receive real-time messages\n5. Send messages to `/api/chat`\n\nMultiple simultaneous WebSocket connections per user are supported (e.g., across devices).\n",
     "contact": {
-      "name": "Whisp Chat API Support",
-      "email": "support@whispchat.com"
+      "name": "Whisp API Support",
+      "email": "info@whispchat.com"
+    },
+    "license": {
+      "name": "Proprietary"
     }
   },
   "servers": [
@@ -15,7 +18,7 @@
       "description": "Production server",
       "variables": {
         "clientDomain": {
-          "default": "example",
+          "default": "whisp-demo",
           "description": "Client-specific subdomain"
         }
       }
@@ -23,345 +26,407 @@
   ],
   "tags": [
     {
+      "name": "User",
+      "description": "User management operations"
+    },
+    {
       "name": "Authentication",
-      "description": "User authentication and token management"
+      "description": "Authentication and token management"
     },
     {
-      "name": "Users",
-      "description": "User account management"
-    },
-    {
-      "name": "Chats",
-      "description": "Chat room operations"
+      "name": "Chat",
+      "description": "Chat management operations"
     },
     {
       "name": "Messages",
-      "description": "Message retrieval"
+      "description": "Message retrieval operations"
     },
     {
       "name": "WebSocket",
-      "description": "Real-time messaging via STOMP/WebSocket"
+      "description": "Real-time WebSocket connection and messaging"
     }
   ],
   "paths": {
     "/api/user/registerUser": {
       "post": {
-        "tags": ["Users"],
+        "tags": [
+          "User"
+        ],
         "summary": "Create User",
-        "description": "Registers a new user account",
+        "description": "Registers a new user account.",
         "operationId": "registerUser",
+        "security": [],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ApiKeyHeader"
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "required": ["username", "firstName", "surName", "email", "password"],
-                "properties": {
-                  "username": {
-                    "type": "string",
-                    "minLength": 3,
-                    "maxLength": 30,
-                    "pattern": "^[a-zA-Z0-9_]+$",
-                    "example": "johndoe"
-                  },
-                  "firstName": {
-                    "type": "string",
-                    "example": "John"
-                  },
-                  "surName": {
-                    "type": "string",
-                    "example": "Doe"
-                  },
-                  "email": {
-                    "type": "string",
-                    "format": "email",
-                    "example": "john.doe@example.com"
-                  },
-                  "password": {
-                    "type": "string",
-                    "format": "password",
-                    "minLength": 8,
-                    "example": "SecurePass123!"
-                  }
-                }
+                "$ref": "#/components/schemas/RegisterUserRequest"
+              },
+              "example": {
+                "username": "johndoe",
+                "firstName": "John",
+                "surName": "Doe",
+                "email": "john.doe@example.com",
+                "password": "SecureP@ss123"
               }
             }
           }
         },
         "responses": {
           "201": {
-            "description": "User successfully created"
+            "description": "User created successfully."
           },
           "400": {
-            "description": "Invalid request",
+            "description": "Invalid request - validation failed.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                },
-                "example": {
-                  "message": "Username already exists"
+                  "$ref": "#/components/schemas/ErrorMessage"
                 }
               }
             }
           }
-        },
-        "security": []
+        }
       }
     },
     "/api/user/signin": {
       "post": {
-        "tags": ["Authentication"],
+        "tags": [
+          "User"
+        ],
         "summary": "Sign In",
-        "description": "Authenticates user and issues JWT & refresh token",
+        "description": "Authenticates a user and issues a JWT in the response header \nand a refresh token in the response body.\n",
         "operationId": "signIn",
+        "security": [],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ApiKeyHeader"
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "required": ["username", "password"],
-                "properties": {
-                  "username": {
-                    "type": "string",
-                    "example": "johndoe"
-                  },
-                  "password": {
-                    "type": "string",
-                    "format": "password",
-                    "example": "SecurePass123!"
-                  }
-                }
+                "$ref": "#/components/schemas/SignInRequest"
+              },
+              "example": {
+                "username": "johndoe",
+                "password": "SecureP@ss123"
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Successfully signed in",
+            "description": "Successfully signed in.",
             "headers": {
               "Authorization": {
+                "description": "JWT token prefixed with \"Bearer \"",
                 "schema": {
                   "type": "string",
-                  "example": "Bearer eyJhbGciOiJIUzI1NiIs..."
+                  "example": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
                 }
               }
             },
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string",
-                      "format": "uuid"
-                    },
-                    "username": {
-                      "type": "string"
-                    },
-                    "email": {
-                      "type": "string",
-                      "format": "email"
-                    },
-                    "refreshToken": {
-                      "type": "string"
-                    },
-                    "roles": {
-                      "type": "array",
-                      "items": {
-                        "type": "string",
-                        "enum": ["USER", "ADMIN"]
-                      }
-                    }
-                  }
+                  "$ref": "#/components/schemas/SignInResponse"
                 }
               }
             }
           },
           "400": {
-            "description": "Invalid request body",
+            "description": "Invalid request body.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "#/components/schemas/ErrorMessage"
                 }
               }
             }
           },
           "401": {
-            "description": "Invalid credentials",
+            "description": "Invalid credentials.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "#/components/schemas/ErrorMessage"
                 }
               }
             }
           }
-        },
-        "security": []
+        }
       }
     },
     "/api/user/changeUsername": {
       "post": {
-        "tags": ["Users"],
+        "tags": [
+          "User"
+        ],
         "summary": "Change Username",
-        "description": "Changes the username of the authenticated user",
+        "description": "Changes the authenticated user's username. \nA new JWT is returned in the Authorization header.\n",
         "operationId": "changeUsername",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "required": ["newUsername"],
-                "properties": {
-                  "newUsername": {
-                    "type": "string",
-                    "minLength": 3,
-                    "maxLength": 30,
-                    "pattern": "^[a-zA-Z0-9_]+$"
-                  }
-                }
+                "$ref": "#/components/schemas/ChangeUsernameRequest"
+              },
+              "example": {
+                "newUsername": "johndoe_updated"
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Username successfully changed",
+            "description": "Username changed successfully. New JWT in Authorization header.",
             "headers": {
               "Authorization": {
+                "description": "New JWT token reflecting the username change",
                 "schema": {
                   "type": "string",
-                  "description": "New JWT token"
+                  "example": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
                 }
               }
             }
           },
           "400": {
-            "description": "Username incorrect format or already exists",
+            "description": "Username has incorrect format or already exists.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "#/components/schemas/ErrorMessage"
                 }
               }
             }
           },
-          "403": {
-            "description": "Invalid or expired JWT"
+          "401": {
+            "description": "Invalid or expired JWT.",
+            "headers": {
+              "WWW-Authenticate": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorResponse"
+                }
+              }
+            }
           }
         }
       }
     },
     "/api/user/deleteUser": {
       "delete": {
-        "tags": ["Users"],
+        "tags": [
+          "User"
+        ],
         "summary": "Delete User",
-        "description": "Deletes the authenticated user account including all data and messages",
+        "description": "Deletes the authenticated user including all their data and messages.",
         "operationId": "deleteUser",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "responses": {
           "200": {
-            "description": "User successfully deleted"
+            "description": "User deleted successfully."
           },
-          "403": {
-            "description": "Invalid or expired JWT"
+          "401": {
+            "description": "Invalid or expired JWT.",
+            "headers": {
+              "WWW-Authenticate": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorResponse"
+                }
+              }
+            }
           },
-          "500": {
-            "description": "Internal server error"
+          "5XX": {
+            "description": "Internal server error."
           }
         }
       }
     },
     "/api/user/getUser": {
       "get": {
-        "tags": ["Users"],
+        "tags": [
+          "User"
+        ],
         "summary": "Get Current User",
-        "description": "Fetches authenticated user information",
-        "operationId": "getCurrentUser",
+        "description": "Fetches the authenticated user's information.",
+        "operationId": "getUser",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "responses": {
           "200": {
-            "description": "User information retrieved",
+            "description": "User information retrieved successfully.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string",
-                      "format": "uuid"
-                    },
-                    "username": {
-                      "type": "string"
-                    },
-                    "email": {
-                      "type": "string",
-                      "format": "email"
-                    },
-                    "role": {
-                      "type": "array",
-                      "items": {
-                        "type": "string",
-                        "enum": ["USER", "ADMIN"]
-                      }
-                    }
-                  }
+                  "$ref": "#/components/schemas/UserInfo"
                 }
               }
             }
           },
-          "403": {
-            "description": "Invalid or expired JWT"
+          "401": {
+            "description": "Invalid or expired JWT.",
+            "headers": {
+              "WWW-Authenticate": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/user/getTicket": {
+      "get": {
+        "tags": [
+          "User",
+          "WebSocket"
+        ],
+        "summary": "Get WebSocket Ticket",
+        "description": "Fetches a ticket required to open a WebSocket connection. \n\n**Important:** This ticket is very short-lived (approximately 20 seconds by default).\nUse it immediately to establish the WebSocket connection.\n",
+        "operationId": "getTicket",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "WebSocket ticket retrieved successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or expired JWT.",
+            "headers": {
+              "WWW-Authenticate": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorResponse"
+                }
+              }
+            }
           }
         }
       }
     },
     "/api/auth/refresh": {
       "post": {
-        "tags": ["Authentication"],
+        "tags": [
+          "Authentication"
+        ],
         "summary": "Refresh JWT",
-        "description": "Renews JWT using refresh token",
+        "description": "Renews an expired JWT using a refresh token. \nThe expired JWT must be included in the request body.\n",
         "operationId": "refreshToken",
+        "security": [],
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": true,
+            "description": "The refresh token (without Bearer prefix)",
+            "schema": {
+              "type": "string",
+              "example": "dGhpcyBpcyBhIHJlZnJlc2ggdG9rZW4..."
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "required": ["refreshToken"],
-                "properties": {
-                  "refreshToken": {
-                    "type": "string"
-                  }
-                }
+                "$ref": "#/components/schemas/RefreshTokenRequest"
+              },
+              "example": {
+                "expiredJwt": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Token successfully refreshed",
+            "description": "JWT refreshed successfully.",
             "headers": {
               "Authorization": {
+                "description": "New JWT token",
                 "schema": {
                   "type": "string",
-                  "description": "New JWT token"
+                  "example": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
                 }
               }
             }
           },
           "400": {
-            "description": "Invalid request body format"
+            "description": "Invalid request body format."
           },
           "401": {
-            "description": "Invalid refresh token or JWT",
+            "description": "Invalid or expired refresh token.",
+            "headers": {
+              "WWW-Authenticate": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "#/components/schemas/AuthErrorResponse"
                 }
               }
             }
@@ -371,277 +436,286 @@
     },
     "/api/auth/logout": {
       "post": {
-        "tags": ["Authentication"],
+        "tags": [
+          "Authentication"
+        ],
         "summary": "Logout",
-        "description": "Invalidates a refresh token",
+        "description": "Invalidates a specific refresh token.",
         "operationId": "logout",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "required": ["refreshToken"],
-                "properties": {
-                  "refreshToken": {
-                    "type": "string"
-                  }
-                }
+                "$ref": "#/components/schemas/LogoutRequest"
+              },
+              "example": {
+                "refreshToken": "dGhpcyBpcyBhIHJlZnJlc2ggdG9rZW4..."
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Token successfully invalidated"
+            "description": "Refresh token invalidated successfully."
           },
           "401": {
-            "description": "Invalid refresh token"
+            "description": "Invalid or expired JWT.",
+            "headers": {
+              "WWW-Authenticate": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorResponse"
+                }
+              }
+            }
           }
         }
       }
     },
     "/api/auth/logoutAll": {
       "post": {
-        "tags": ["Authentication"],
+        "tags": [
+          "Authentication"
+        ],
         "summary": "Logout All Sessions",
-        "description": "Invalidates all refresh tokens for the user",
+        "description": "Invalidates all refresh tokens for the authenticated user. \nThis effectively logs out all active sessions across all devices.\n",
         "operationId": "logoutAll",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": ["refreshToken"],
-                "properties": {
-                  "refreshToken": {
-                    "type": "string"
-                  }
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "All refresh tokens invalidated successfully."
+          },
+          "401": {
+            "description": "Invalid or expired JWT.",
+            "headers": {
+              "WWW-Authenticate": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorResponse"
                 }
               }
             }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "All refresh tokens invalidated"
-          },
-          "403": {
-            "description": "Invalid or expired JWT"
           }
         }
       }
     },
     "/api/chat/createChat": {
       "post": {
-        "tags": ["Chats"],
+        "tags": [
+          "Chat"
+        ],
         "summary": "Create Chat",
-        "description": "Creates a new chat with two or more users",
+        "description": "Creates a new chat with two or more users.",
         "operationId": "createChat",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "required": ["chatName", "userNames"],
-                "properties": {
-                  "chatName": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 100
-                  },
-                  "userNames": {
-                    "type": "array",
-                    "minItems": 2,
-                    "items": {
-                      "type": "string"
-                    },
-                    "description": "Must include the creating user's username"
-                  }
-                }
+                "$ref": "#/components/schemas/CreateChatRequest"
+              },
+              "example": {
+                "chatName": "Project Discussion",
+                "userNames": [
+                  "johndoe",
+                  "janedoe",
+                  "bobsmith"
+                ]
               }
             }
           }
         },
         "responses": {
           "201": {
-            "description": "Chat successfully created",
+            "description": "Chat created successfully.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Chat"
+                  "$ref": "#/components/schemas/ChatDetails"
                 }
               }
             }
           },
           "400": {
-            "description": "Invalid request",
+            "description": "Bad request. Possible reasons:\n- Invalid usernames given\n- Own username not included in request\n- Chat name has invalid format\n",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "#/components/schemas/ErrorMessage"
                 }
               }
             }
           },
-          "403": {
-            "description": "Invalid or expired JWT"
+          "401": {
+            "description": "Invalid or expired JWT.",
+            "headers": {
+              "WWW-Authenticate": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorResponse"
+                }
+              }
+            }
           }
         }
       }
     },
     "/api/chat/getChats": {
       "get": {
-        "tags": ["Chats"],
+        "tags": [
+          "Chat"
+        ],
         "summary": "List Chats",
-        "description": "Returns all chats for the authenticated user",
+        "description": "Returns all chats for the authenticated user with pagination support.",
         "operationId": "getChats",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "parameters": [
           {
             "name": "page",
             "in": "query",
+            "description": "Page number (zero-based)",
+            "required": false,
             "schema": {
               "type": "integer",
-              "default": 0
-            },
-            "description": "Page number for pagination"
-          },
-          {
-            "name": "size",
-            "in": "query",
-            "schema": {
-              "type": "integer",
-              "default": 20
-            },
-            "description": "Number of items per page"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of user's chats",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "chats": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/Chat"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Invalid or expired JWT"
-          }
-        }
-      }
-    },
-    "/api/messages/getMessages/{chatId}": {
-      "get": {
-        "tags": ["Messages"],
-        "summary": "Get Messages",
-        "description": "Fetches messages from a chat. Automatically marks the last message as read.",
-        "operationId": "getMessages",
-        "parameters": [
-          {
-            "name": "chatId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
+              "default": 0,
+              "minimum": 0
             }
           },
           {
             "name": "size",
             "in": "query",
+            "description": "Number of chats per page",
+            "required": false,
             "schema": {
               "type": "integer",
-              "default": 50
-            },
-            "description": "Number of messages to retrieve"
-          },
-          {
-            "name": "lastMessage",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "ID of last message for pagination"
+              "default": 20,
+              "minimum": 1,
+              "maximum": 100
+            }
           }
         ],
         "responses": {
           "200": {
-            "description": "Messages retrieved successfully",
+            "description": "List of chats retrieved successfully.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "messages": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/Message"
-                      }
-                    }
-                  }
+                  "$ref": "#/components/schemas/ChatsListResponse"
                 }
               }
             }
           },
-          "400": {
-            "description": "User not in chat or chat doesn't exist"
-          },
-          "403": {
-            "description": "Invalid or expired JWT"
+          "401": {
+            "description": "Invalid or expired JWT.",
+            "headers": {
+              "WWW-Authenticate": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorResponse"
+                }
+              }
+            }
           }
         }
       }
     },
     "/api/chat/addUser": {
       "post": {
-        "tags": ["Chats"],
+        "tags": [
+          "Chat"
+        ],
         "summary": "Add User to Chat",
-        "description": "Adds a user to an existing chat",
+        "description": "Adds a user to an existing chat.",
         "operationId": "addUserToChat",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "required": ["chatId", "newUsername"],
-                "properties": {
-                  "chatId": {
-                    "type": "string",
-                    "format": "uuid"
-                  },
-                  "newUsername": {
-                    "type": "string"
-                  }
-                }
+                "$ref": "#/components/schemas/AddUserRequest"
+              },
+              "example": {
+                "chatId": "550e8400-e29b-41d4-a716-446655440000",
+                "newUsername": "newuser"
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "User successfully added"
+            "description": "User added to chat successfully."
           },
           "400": {
-            "description": "Invalid request",
+            "description": "Bad request. Possible reasons:\n- User is not in given chat\n- New username is invalid\n- New user is already in chat\n- Chat does not exist\n",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or expired JWT.",
+            "headers": {
+              "WWW-Authenticate": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorResponse"
                 }
               }
             }
@@ -651,15 +725,23 @@
     },
     "/api/chat/getUsers/{chatId}": {
       "get": {
-        "tags": ["Chats"],
+        "tags": [
+          "Chat"
+        ],
         "summary": "Get Users in Chat",
-        "description": "Lists all users in a chat with their read status",
+        "description": "Lists all users in a chat including when they joined, \ntheir usernames, and the last message they have seen.\n",
         "operationId": "getChatUsers",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "parameters": [
           {
             "name": "chatId",
             "in": "path",
             "required": true,
+            "description": "ID of the chat to list users from",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -668,84 +750,125 @@
         ],
         "responses": {
           "200": {
-            "description": "List of chat users",
+            "description": "User list retrieved successfully.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "users": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/ChatUser"
-                      }
-                    }
-                  }
+                  "$ref": "#/components/schemas/ChatUsersResponse"
                 }
               }
             }
           },
           "400": {
-            "description": "User not in chat or chat doesn't exist"
+            "description": "Bad request. Possible reasons:\n- User is not in given chat\n- Chat does not exist\n",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
           },
-          "403": {
-            "description": "Invalid or expired JWT"
+          "401": {
+            "description": "Invalid or expired JWT.",
+            "headers": {
+              "WWW-Authenticate": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorResponse"
+                }
+              }
+            }
           }
         }
       }
     },
     "/api/chat/changeName": {
       "post": {
-        "tags": ["Chats"],
+        "tags": [
+          "Chat"
+        ],
         "summary": "Change Chat Name",
-        "description": "Changes the name of an existing chat",
+        "description": "Changes the name of an existing chat.",
         "operationId": "changeChatName",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "required": ["chatId", "newChatName"],
-                "properties": {
-                  "chatId": {
-                    "type": "string",
-                    "format": "uuid"
-                  },
-                  "newChatName": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 100
-                  }
-                }
+                "$ref": "#/components/schemas/ChangeChatNameRequest"
+              },
+              "example": {
+                "chatId": "550e8400-e29b-41d4-a716-446655440000",
+                "newChatName": "Updated Project Name"
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Chat name successfully changed"
+            "description": "Chat name changed successfully."
           },
           "400": {
-            "description": "Invalid request"
+            "description": "Bad request. Possible reasons:\n- User is not in given chat\n- Chat does not exist\n",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
           },
-          "403": {
-            "description": "Invalid or expired JWT"
+          "401": {
+            "description": "Invalid or expired JWT.",
+            "headers": {
+              "WWW-Authenticate": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorResponse"
+                }
+              }
+            }
           }
         }
       }
     },
     "/api/chat/deleteChat": {
       "delete": {
-        "tags": ["Chats"],
+        "tags": [
+          "Chat"
+        ],
         "summary": "Delete Chat",
-        "description": "Deletes a chat (only creator can perform this action)",
+        "description": "Deletes a chat. Only the creator of the chat can perform this action.\n",
         "operationId": "deleteChat",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "parameters": [
           {
             "name": "chatId",
             "in": "query",
             "required": true,
+            "description": "ID of the chat to delete",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -754,172 +877,574 @@
         ],
         "responses": {
           "200": {
-            "description": "Chat successfully deleted"
+            "description": "Chat deleted successfully."
           },
           "400": {
-            "description": "User not in chat or chat doesn't exist"
+            "description": "Bad request. Possible reasons:\n- User is not in given chat\n- Chat does not exist\n- User is not the creator\n",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
           },
           "401": {
-            "description": "User is not the creator of the chat"
-          },
-          "403": {
-            "description": "Invalid or expired JWT"
+            "description": "Invalid or expired JWT.",
+            "headers": {
+              "WWW-Authenticate": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorResponse"
+                }
+              }
+            }
           }
         }
       }
     },
     "/api/chat/removeUser": {
       "post": {
-        "tags": ["Chats"],
+        "tags": [
+          "Chat"
+        ],
         "summary": "Remove User from Chat",
-        "description": "User leaves chat. If creator leaves, ownership transfers to longest-tenured member",
+        "description": "Removes a user from a chat (user leaves the chat). \nIf the creator leaves, ownership transfers to the longest-tenured member.\n\n**Note:** Currently, a user can only remove themselves from a chat.\n",
         "operationId": "removeUserFromChat",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "required": ["chatId", "removeUser"],
-                "properties": {
-                  "chatId": {
-                    "type": "string",
-                    "format": "uuid"
-                  },
-                  "removeUser": {
-                    "type": "string",
-                    "format": "uuid",
-                    "description": "User ID to remove (must be the requesting user)"
-                  }
-                }
+                "$ref": "#/components/schemas/RemoveUserRequest"
+              },
+              "example": {
+                "chatId": "550e8400-e29b-41d4-a716-446655440000",
+                "removeUser": "660e8400-e29b-41d4-a716-446655440001"
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "User successfully removed"
+            "description": "User removed from chat successfully."
           },
           "400": {
-            "description": "Invalid request"
+            "description": "Bad request. Possible reasons:\n- User is not in given chat\n- Request was not made by the actual leaving user\n",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or expired JWT.",
+            "headers": {
+              "WWW-Authenticate": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/messages/getMessages/{chatId}": {
+      "get": {
+        "tags": [
+          "Messages"
+        ],
+        "summary": "Get Messages",
+        "description": "Fetches messages for a specific chat with pagination support.\n\n**Note:** Calling this endpoint automatically triggers a read receipt \non the last message in the chat.\n",
+        "operationId": "getMessages",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "chatId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the chat to fetch messages from",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "description": "Number of messages to retrieve",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "lastMessage",
+            "in": "query",
+            "description": "Message ID for cursor-based pagination (fetch messages before this ID)",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Messages retrieved successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessagesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "User is not in the given chat or chat does not exist.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or expired JWT.",
+            "headers": {
+              "WWW-Authenticate": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/wsConnect": {
+      "get": {
+        "tags": [
+          "WebSocket"
+        ],
+        "summary": "WebSocket Connection Endpoint",
+        "description": "**This is a WebSocket upgrade endpoint using STOMP protocol.**\n\n## Connection Steps\n\n1. Obtain a ticket from `GET /api/user/getTicket`\n2. Connect to this endpoint with the ticket as a query parameter\n3. Use STOMP protocol for communication\n\n## STOMP Headers Required\n- `Authorization: Bearer <JWT>`\n\n## Subscribe to Messages\nSubscribe to `/user/{userId}/queue/messages` to receive real-time events.\n\n## Send Messages\nSend STOMP messages to destination `/api/chat` with appropriate payload.\n\n## Supported Message Types\n\n### Outbound (Client \u2192 Server) - Send to `/api/chat`:\n- `SEND_MSG` - Send a new message\n- `EDIT_MSG` - Edit an existing message\n- `DELETE_MSG` - Delete a message\n- `TYPING` - Indicate user is typing\n- `REACT` - React to a message\n- `DELETE_REACT` - Remove a reaction\n- `REPLY` - Reply to a message\n- `READ_MSG` - Mark message as read\n\n### Inbound (Server \u2192 Client) - Received on `/user/{userId}/queue/messages`:\n- `SEND_MSG` - New message received\n- `EDIT_MSG` - Message was edited\n- `DELETE_MSG` - Message was deleted\n- `USER_JOIN` - User joined chat\n- `USER_LEAVE` - User left chat\n- `NEW_CHAT` - New chat created\n- `DELETE_CHAT` - Chat was deleted\n- `READ_MSG` - Message was read\n- `REACT` - Reaction added\n- `DELETE_REACT` - Reaction removed\n- `REPLY` - Reply received\n- `TYPING` - User is typing\n\nSee the schemas section for detailed message formats.\n",
+        "operationId": "wsConnect",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "ticket",
+            "in": "query",
+            "required": true,
+            "description": "Short-lived ticket obtained from `/api/user/getTicket`",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "101": {
+            "description": "Switching Protocols - WebSocket connection established"
+          },
+          "401": {
+            "description": "Invalid ticket or JWT"
           },
           "403": {
-            "description": "Invalid or expired JWT"
+            "description": "Ticket expired"
           }
         }
       }
     }
   },
   "components": {
-    "schemas": {
-      "ErrorResponse": {
-        "type": "object",
-        "properties": {
-          "message": {
-            "type": "string",
-            "description": "Error message"
-          }
-        },
-        "required": ["message"]
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT token obtained from sign-in or refresh endpoints"
       },
-      "Chat": {
+      "apiKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-api-key",
+        "description": "API key for unauthenticated endpoints (registration, sign-in)"
+      }
+    },
+    "parameters": {
+      "ApiKeyHeader": {
+        "name": "x-api-key",
+        "in": "header",
+        "required": true,
+        "description": "API key for authentication",
+        "schema": {
+          "type": "string"
+        }
+      }
+    },
+    "schemas": {
+      "RegisterUserRequest": {
         "type": "object",
+        "required": [
+          "username",
+          "firstName",
+          "surName",
+          "email",
+          "password"
+        ],
         "properties": {
-          "chatId": {
+          "username": {
             "type": "string",
-            "format": "uuid"
+            "description": "Unique username",
+            "minLength": 3,
+            "maxLength": 50
           },
-          "chatName": {
-            "type": "string"
-          },
-          "isGroup": {
-            "type": "boolean"
-          },
-          "lastMessageTimestamp": {
+          "firstName": {
             "type": "string",
-            "format": "date-time"
+            "description": "User's first name"
           },
-          "lastMessage": {
-            "type": "string"
-          },
-          "createdAt": {
+          "surName": {
             "type": "string",
-            "format": "date-time"
+            "description": "User's surname/last name"
           },
-          "creator": {
+          "email": {
             "type": "string",
-            "format": "uuid"
+            "format": "email",
+            "description": "User's email address"
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "description": "User's password",
+            "minLength": 8
           }
         }
       },
-      "Message": {
+      "SignInRequest": {
+        "type": "object",
+        "required": [
+          "username",
+          "password"
+        ],
+        "properties": {
+          "username": {
+            "type": "string",
+            "description": "Username"
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "description": "Password"
+          }
+        }
+      },
+      "ChangeUsernameRequest": {
+        "type": "object",
+        "required": [
+          "newUsername"
+        ],
+        "properties": {
+          "newUsername": {
+            "type": "string",
+            "description": "The new username",
+            "minLength": 3,
+            "maxLength": 50
+          }
+        }
+      },
+      "RefreshTokenRequest": {
+        "type": "object",
+        "required": [
+          "expiredJwt"
+        ],
+        "properties": {
+          "expiredJwt": {
+            "type": "string",
+            "description": "The expired JWT token to be refreshed"
+          }
+        }
+      },
+      "LogoutRequest": {
+        "type": "object",
+        "required": [
+          "refreshToken"
+        ],
+        "properties": {
+          "refreshToken": {
+            "type": "string",
+            "description": "The refresh token to invalidate"
+          }
+        }
+      },
+      "CreateChatRequest": {
+        "type": "object",
+        "required": [
+          "chatName",
+          "userNames"
+        ],
+        "properties": {
+          "chatName": {
+            "type": "string",
+            "description": "Name of the chat"
+          },
+          "userNames": {
+            "type": "array",
+            "description": "List of usernames to include in the chat (must include own username)",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 2
+          }
+        }
+      },
+      "AddUserRequest": {
+        "type": "object",
+        "required": [
+          "chatId",
+          "newUsername"
+        ],
+        "properties": {
+          "chatId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the chat"
+          },
+          "newUsername": {
+            "type": "string",
+            "description": "Username of the user to add"
+          }
+        }
+      },
+      "ChangeChatNameRequest": {
+        "type": "object",
+        "required": [
+          "chatId",
+          "newChatName"
+        ],
+        "properties": {
+          "chatId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the chat"
+          },
+          "newChatName": {
+            "type": "string",
+            "description": "New name for the chat"
+          }
+        }
+      },
+      "RemoveUserRequest": {
+        "type": "object",
+        "required": [
+          "chatId",
+          "removeUser"
+        ],
+        "properties": {
+          "chatId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the chat"
+          },
+          "removeUser": {
+            "type": "string",
+            "format": "uuid",
+            "description": "User ID of the user to remove (must be own ID)"
+          }
+        }
+      },
+      "SignInResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "User's unique identifier"
+          },
+          "username": {
+            "type": "string",
+            "description": "User's username"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "User's email address"
+          },
+          "refreshToken": {
+            "type": "string",
+            "description": "Refresh token for obtaining new JWTs"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "USER",
+                "ADMIN"
+              ]
+            },
+            "description": "User's roles"
+          }
+        }
+      },
+      "UserInfo": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "User's unique identifier"
+          },
+          "username": {
+            "type": "string",
+            "description": "User's username"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "User's email address"
+          },
+          "role": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "USER",
+                "ADMIN"
+              ]
+            },
+            "description": "User's roles"
+          }
+        }
+      },
+      "TicketResponse": {
+        "type": "object",
+        "properties": {
+          "ticket": {
+            "type": "string",
+            "description": "Short-lived ticket for WebSocket connection (valid ~20 seconds)"
+          }
+        }
+      },
+      "ChatDetails": {
         "type": "object",
         "properties": {
           "chatId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "Unique chat identifier"
           },
-          "timeStamp": {
+          "chatName": {
             "type": "string",
-            "format": "date-time"
+            "description": "Name of the chat"
           },
-          "messageId": {
+          "lastMessageTimestamp": {
             "type": "string",
-            "format": "uuid"
+            "format": "date-time",
+            "description": "Timestamp of the last message (ISO 8601)"
           },
-          "senderId": {
+          "lastMessage": {
             "type": "string",
-            "format": "uuid"
+            "description": "Content of the last message"
           },
-          "content": {
-            "type": "string"
-          },
-          "edited": {
-            "type": "boolean"
-          },
-          "editedAt": {
+          "createdAt": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "description": "Chat creation timestamp (ISO 8601)"
           },
-          "replyTo": {
-            "$ref": "#/components/schemas/ReplyMessage"
+          "creator": {
+            "type": "string",
+            "format": "uuid",
+            "description": "User ID of the chat creator"
           },
-          "reactions": {
+          "groupChat": {
+            "type": "boolean",
+            "description": "Whether this is a group chat (more than 2 users)"
+          }
+        }
+      },
+      "ChatsListResponse": {
+        "type": "object",
+        "properties": {
+          "chats": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/Reaction"
+              "$ref": "#/components/schemas/ChatDetails"
             }
           }
         }
       },
-      "ReplyMessage": {
+      "ChatUserInfo": {
         "type": "object",
         "properties": {
-          "chatId": {
+          "userId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "User's unique identifier"
           },
-          "timeStamp": {
+          "username": {
             "type": "string",
-            "format": "date-time"
+            "description": "User's username"
           },
-          "messageId": {
+          "joinedChatAt": {
             "type": "string",
-            "format": "uuid"
+            "format": "date-time",
+            "description": "When the user joined the chat (ISO 8601)"
           },
-          "senderId": {
+          "lastSeenMessage": {
             "type": "string",
-            "format": "uuid"
-          },
-          "content": {
-            "type": "string"
-          },
-          "edited": {
-            "type": "boolean"
-          },
-          "editedAt": {
-            "type": "string",
-            "format": "date-time"
+            "format": "uuid",
+            "description": "ID of the last message the user has seen"
+          }
+        }
+      },
+      "ChatUsersResponse": {
+        "type": "object",
+        "properties": {
+          "users": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChatUserInfo"
+            }
           }
         }
       },
@@ -928,207 +1453,388 @@
         "properties": {
           "reactionId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "Unique reaction identifier"
           },
           "chatId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "messageId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "senderId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "reaction": {
-            "type": "string"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          }
-        }
-      },
-      "ChatUser": {
-        "type": "object",
-        "properties": {
-          "userId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "username": {
-            "type": "string"
-          },
-          "joinedChatAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "lastSeenMessage": {
             "type": "string",
             "format": "uuid",
-            "description": "ID of the last message this user has read"
-          }
-        }
-      },
-      "WsSendMessage": {
-        "type": "object",
-        "required": ["type", "senderId", "message", "timeStamp", "chatId"],
-        "properties": {
-          "type": {
-            "type": "string",
-            "enum": ["SEND_MSG"]
-          },
-          "senderId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "message": {
-            "type": "string"
-          },
-          "timeStamp": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "chatId": {
-            "type": "string",
-            "format": "uuid"
-          }
-        }
-      },
-      "WsEditMessage": {
-        "type": "object",
-        "required": ["type", "senderId", "message", "messageId", "chatId", "timeStamp"],
-        "properties": {
-          "type": {
-            "type": "string",
-            "enum": ["EDIT_MSG"]
-          },
-          "senderId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "message": {
-            "type": "string"
-          },
-          "messageId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "chatId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "timeStamp": {
-            "type": "string",
-            "format": "date-time"
-          }
-        }
-      },
-      "WsDeleteMessage": {
-        "type": "object",
-        "required": ["type", "senderId", "chatId", "messageId"],
-        "properties": {
-          "type": {
-            "type": "string",
-            "enum": ["DELETE_MSG"]
-          },
-          "senderId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "chatId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "messageId": {
-            "type": "string",
-            "format": "uuid"
-          }
-        }
-      },
-      "WsTyping": {
-        "type": "object",
-        "required": ["type", "senderId", "chatId"],
-        "properties": {
-          "type": {
-            "type": "string",
-            "enum": ["TYPING"]
-          },
-          "senderId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "chatId": {
-            "type": "string",
-            "format": "uuid"
-          }
-        }
-      },
-      "WsReact": {
-        "type": "object",
-        "required": ["type", "senderId", "chatId", "messageId", "reaction", "timeStamp"],
-        "properties": {
-          "type": {
-            "type": "string",
-            "enum": ["REACT"]
-          },
-          "senderId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "chatId": {
-            "type": "string",
-            "format": "uuid"
+            "description": "Chat ID where the reaction occurred"
           },
           "messageId": {
             "type": "string",
             "format": "uuid",
             "description": "ID of the message being reacted to"
           },
+          "senderId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "User ID who made the reaction"
+          },
           "reaction": {
-            "type": "string"
+            "type": "string",
+            "description": "Reaction type or emoji"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the reaction was created (ISO 8601)"
+          }
+        }
+      },
+      "MessageContent": {
+        "type": "object",
+        "properties": {
+          "chatId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Chat ID"
           },
           "timeStamp": {
             "type": "string",
-            "format": "date-time"
-          }
-        }
-      },
-      "WsDeleteReact": {
-        "type": "object",
-        "required": ["type", "senderId", "reactionId"],
-        "properties": {
-          "type": {
+            "format": "date-time",
+            "description": "Message timestamp (ISO 8601)"
+          },
+          "messageId": {
             "type": "string",
-            "enum": ["DELETE_REACT"]
+            "format": "uuid",
+            "description": "Unique message identifier"
           },
           "senderId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "User ID of the sender"
           },
-          "reactionId": {
+          "content": {
             "type": "string",
-            "format": "uuid"
+            "description": "Message content"
+          },
+          "edited": {
+            "type": "boolean",
+            "description": "Whether the message has been edited"
+          },
+          "editedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the message was last edited (ISO 8601)",
+            "nullable": true
           }
         }
       },
-      "WsReply": {
+      "Message": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/MessageContent"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "replyTo": {
+                "$ref": "#/components/schemas/MessageContent",
+                "nullable": true,
+                "description": "The message this is a reply to (null if not a reply)"
+              },
+              "reactions": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Reaction"
+                },
+                "description": "Reactions to this message"
+              }
+            }
+          }
+        ]
+      },
+      "MessagesResponse": {
         "type": "object",
-        "required": ["type", "senderId", "chatId", "messageId", "message", "timeStamp"],
+        "properties": {
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Message"
+            }
+          }
+        }
+      },
+      "ErrorMessage": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Error message describing what went wrong"
+          }
+        }
+      },
+      "AuthErrorResponse": {
+        "type": "object",
+        "description": "Authentication error response (returned with WWW-Authenticate header)",
         "properties": {
           "type": {
             "type": "string",
-            "enum": ["REPLY"]
+            "description": "Error type"
+          },
+          "title": {
+            "type": "string",
+            "description": "Error title"
+          },
+          "status": {
+            "type": "string",
+            "description": "HTTP status"
+          },
+          "detail": {
+            "type": "string",
+            "description": "Detailed error description"
+          },
+          "instance": {
+            "type": "string",
+            "description": "Instance identifier"
+          },
+          "code": {
+            "type": "string",
+            "description": "Error code"
+          }
+        }
+      },
+      "WsSendMessageRequest": {
+        "type": "object",
+        "description": "**STOMP Destination:** `/api/chat`\n\nSend a new message to a chat.\n",
+        "required": [
+          "type",
+          "senderId",
+          "message",
+          "timeStamp",
+          "chatId"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "SEND_MSG"
+            ]
           },
           "senderId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "ID of the sending user"
+          },
+          "message": {
+            "type": "string",
+            "description": "Message content"
+          },
+          "timeStamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Client-side timestamp (ISO 8601)"
           },
           "chatId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "Target chat ID"
+          }
+        }
+      },
+      "WsEditMessageRequest": {
+        "type": "object",
+        "description": "**STOMP Destination:** `/api/chat`\n\nEdit an existing message. The timestamp is the time of editing, not the original message timestamp.\n",
+        "required": [
+          "type",
+          "senderId",
+          "message",
+          "messageId",
+          "chatId",
+          "timeStamp"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "EDIT_MSG"
+            ]
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the sending user"
+          },
+          "message": {
+            "type": "string",
+            "description": "New message content"
+          },
+          "messageId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the message to edit"
+          },
+          "chatId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Chat ID"
+          },
+          "timeStamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Time of editing (ISO 8601)"
+          }
+        }
+      },
+      "WsDeleteMessageRequest": {
+        "type": "object",
+        "description": "**STOMP Destination:** `/api/chat`\n\nDelete a message.\n",
+        "required": [
+          "type",
+          "senderId",
+          "chatId",
+          "messageId"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "DELETE_MSG"
+            ]
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the sending user"
+          },
+          "chatId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Chat ID"
+          },
+          "messageId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the message to delete"
+          }
+        }
+      },
+      "WsTypingRequest": {
+        "type": "object",
+        "description": "**STOMP Destination:** `/api/chat`\n\nIndicate that the user is typing in a chat.\n",
+        "required": [
+          "type",
+          "senderId",
+          "chatId"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "TYPING"
+            ]
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the typing user"
+          },
+          "chatId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Chat ID"
+          }
+        }
+      },
+      "WsReactRequest": {
+        "type": "object",
+        "description": "**STOMP Destination:** `/api/chat`\n\nReact to a message. The messageId is the UUID of the message being reacted to.\nAnother reaction to the same message will overwrite the previous reaction.\n",
+        "required": [
+          "type",
+          "senderId",
+          "chatId",
+          "messageId",
+          "reaction",
+          "timeStamp"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "REACT"
+            ]
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the reacting user"
+          },
+          "chatId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Chat ID"
+          },
+          "messageId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the message to react to"
+          },
+          "reaction": {
+            "type": "string",
+            "description": "Reaction type or emoji"
+          },
+          "timeStamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Reaction timestamp (ISO 8601)"
+          }
+        }
+      },
+      "WsDeleteReactRequest": {
+        "type": "object",
+        "description": "**STOMP Destination:** `/api/chat`\n\nRemove a reaction. The reactionId can be found in the response of `/getMessages` \nor in the message object sent to the user after they reacted.\n",
+        "required": [
+          "type",
+          "senderId",
+          "reactionId"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "DELETE_REACT"
+            ]
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the user removing their reaction"
+          },
+          "reactionId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the reaction to remove"
+          }
+        }
+      },
+      "WsReplyRequest": {
+        "type": "object",
+        "description": "**STOMP Destination:** `/api/chat`\n\nReply to a message. The messageId is the UUID of the message being replied to.\n",
+        "required": [
+          "type",
+          "senderId",
+          "chatId",
+          "messageId",
+          "message",
+          "timeStamp"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "REPLY"
+            ]
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the replying user"
+          },
+          "chatId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Chat ID"
           },
           "messageId": {
             "type": "string",
@@ -1136,209 +1842,269 @@
             "description": "ID of the message being replied to"
           },
           "message": {
-            "type": "string"
+            "type": "string",
+            "description": "Reply message content"
           },
           "timeStamp": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "description": "Reply timestamp (ISO 8601)"
           }
         }
       },
-      "WsReadMessage": {
+      "WsReadMessageRequest": {
         "type": "object",
-        "required": ["type", "senderId", "chatId", "messageId"],
+        "description": "**STOMP Destination:** `/api/chat`\n\nMark a message as read. Send this when a chat is opened and `/getMessages` was NOT called\n(that endpoint automatically triggers a read), or when a new message arrives while \nthe user is in the chat.\n",
+        "required": [
+          "type",
+          "senderId",
+          "chatId",
+          "messageId"
+        ],
         "properties": {
           "type": {
             "type": "string",
-            "enum": ["READ_MSG"]
+            "enum": [
+              "READ_MSG"
+            ]
           },
           "senderId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "ID of the reading user"
           },
           "chatId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "Chat ID"
           },
           "messageId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "ID of the message being marked as read"
           }
         }
       },
-      "WsIncomingMessage": {
+      "WsSendMessageEvent": {
         "type": "object",
+        "description": "**Received on:** `/user/{userId}/queue/messages`\n\nA new message from another user.\n",
         "properties": {
           "type": {
             "type": "string",
-            "enum": ["SEND_MSG"]
+            "enum": [
+              "SEND_MSG"
+            ]
           },
           "timeStamp": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "description": "Message timestamp (ISO 8601)"
           },
           "chatId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "Chat ID"
           },
           "message": {
-            "type": "string"
+            "type": "string",
+            "description": "Message content"
           },
           "messageId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "Unique message identifier"
           },
           "recipientId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "ID of the recipient (current user)"
           },
           "senderId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "ID of the message sender"
           }
         }
       },
-      "WsIncomingEdit": {
+      "WsEditMessageEvent": {
         "type": "object",
+        "description": "**Received on:** `/user/{userId}/queue/messages`\n\nA message was edited.\n",
         "properties": {
           "type": {
             "type": "string",
-            "enum": ["EDIT_MSG"]
+            "enum": [
+              "EDIT_MSG"
+            ]
           },
           "chatId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "Chat ID"
           },
           "message": {
-            "type": "string"
+            "type": "string",
+            "description": "New message content"
           },
           "messageId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "ID of the edited message"
           },
           "recipientId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "ID of the recipient"
           },
           "senderId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "ID of the user who edited the message"
           },
           "editedAt": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "description": "When the message was edited (ISO 8601)"
           }
         }
       },
-      "WsIncomingDelete": {
+      "WsDeleteMessageEvent": {
         "type": "object",
+        "description": "**Received on:** `/user/{userId}/queue/messages`\n\nA message was deleted. Update the chat's last message attribute to \"Message Deleted\" locally.\n",
         "properties": {
           "type": {
             "type": "string",
-            "enum": ["DELETE_MSG"]
+            "enum": [
+              "DELETE_MSG"
+            ]
           },
           "chatId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "Chat ID"
           },
           "messageId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "ID of the deleted message"
           },
           "recipientId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "ID of the recipient"
           },
           "senderId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "ID of the user who deleted the message"
           },
           "timeStamp": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "description": "Deletion timestamp (ISO 8601)"
           }
         }
       },
-      "WsIncomingUserJoin": {
+      "WsUserJoinEvent": {
         "type": "object",
+        "description": "**Received on:** `/user/{userId}/queue/messages`\n\nA user was added to a chat. The `message` attribute contains the new user's ID,\nand `username` contains their username.\n",
         "properties": {
           "type": {
             "type": "string",
-            "enum": ["USER_JOIN"]
+            "enum": [
+              "USER_JOIN"
+            ]
           },
           "chatId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "Chat ID"
           },
           "message": {
             "type": "string",
             "format": "uuid",
-            "description": "UUID of new user"
+            "description": "ID of the new user"
           },
           "username": {
-            "type": "string"
+            "type": "string",
+            "description": "Username of the new user"
           },
           "recipientId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "ID of the recipient"
           },
           "senderId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "ID of the user who added the new member"
           }
         }
       },
-      "WsIncomingUserLeave": {
+      "WsUserLeaveEvent": {
         "type": "object",
+        "description": "**Received on:** `/user/{userId}/queue/messages`\n\nA user left the chat.\n",
         "properties": {
           "type": {
             "type": "string",
-            "enum": ["USER_LEAVE"]
+            "enum": [
+              "USER_LEAVE"
+            ]
           },
           "chatId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "Chat ID"
           },
           "message": {
             "type": "string",
-            "description": "Leave message"
+            "description": "Leave message (e.g., \"{username} left the Chat\")"
           },
           "recipientId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "ID of the recipient"
           },
           "timeStamp": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "description": "Leave timestamp (ISO 8601)"
           },
           "senderId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "ID of the user who left"
           }
         }
       },
-      "WsIncomingNewChat": {
+      "WsNewChatEvent": {
         "type": "object",
+        "description": "**Received on:** `/user/{userId}/queue/messages`\n\nA new chat was created for the user.\n",
         "properties": {
           "type": {
             "type": "string",
-            "enum": ["NEW_CHAT"]
+            "enum": [
+              "NEW_CHAT"
+            ]
           },
           "timeStamp": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "description": "Creation timestamp (ISO 8601)"
           },
           "chatId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "New chat ID"
           },
           "recipientId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "ID of the recipient"
           },
           "senderId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "ID of the user who created the chat"
           },
           "message": {
             "type": "string",
@@ -1346,167 +2112,681 @@
           }
         }
       },
-      "WsIncomingDeleteChat": {
+      "WsDeleteChatEvent": {
         "type": "object",
+        "description": "**Received on:** `/user/{userId}/queue/messages`\n\nA chat was deleted.\n",
         "properties": {
           "type": {
             "type": "string",
-            "enum": ["DELETE_CHAT"]
+            "enum": [
+              "DELETE_CHAT"
+            ]
           },
           "chatId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "Deleted chat ID"
           },
           "recipientId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "ID of the recipient"
           },
           "senderId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "ID of the user who deleted the chat"
           }
         }
       },
-      "WsIncomingRead": {
+      "WsReadMessageEvent": {
         "type": "object",
+        "description": "**Received on:** `/user/{userId}/queue/messages`\n\nA message was read by another user.\n",
         "properties": {
           "type": {
             "type": "string",
-            "enum": ["READ_MSG"]
+            "enum": [
+              "READ_MSG"
+            ]
           },
           "chatId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "Chat ID"
           },
           "recipientId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "ID of the recipient (current user)"
           },
           "senderId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "ID of the user who read the message"
           },
           "messageId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "ID of the message that was read"
           }
         }
       },
-      "WsIncomingReact": {
+      "WsReactEvent": {
         "type": "object",
+        "description": "**Received on:** `/user/{userId}/queue/messages`\n\nA reaction was added to a message.\n",
         "properties": {
           "type": {
             "type": "string",
-            "enum": ["REACT"]
+            "enum": [
+              "REACT"
+            ]
           },
           "messageId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "ID of the reaction (for deletion purposes)"
           },
           "message": {
             "type": "string",
-            "description": "Reaction emoji or type"
+            "description": "Reaction type or emoji"
           },
           "chatId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "Chat ID"
           },
           "recipientId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "ID of the recipient"
           },
           "senderId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "ID of the user who reacted"
           },
           "parentMessageId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "ID of the message that was reacted to"
           },
           "timeStamp": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "description": "Reaction timestamp (ISO 8601)"
           }
         }
       },
-      "WsIncomingDeleteReact": {
+      "WsDeleteReactEvent": {
         "type": "object",
+        "description": "**Received on:** `/user/{userId}/queue/messages`\n\nA reaction was removed.\n",
         "properties": {
           "type": {
             "type": "string",
-            "enum": ["DELETE_REACT"]
+            "enum": [
+              "DELETE_REACT"
+            ]
           },
           "messageId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "ID of the deleted reaction"
           },
           "chatId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "Chat ID"
           },
           "recipientId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "ID of the recipient"
           },
           "senderId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "ID of the user who removed the reaction"
           }
         }
       },
-      "WsIncomingReply": {
+      "WsReplyEvent": {
         "type": "object",
+        "description": "**Received on:** `/user/{userId}/queue/messages`\n\nA reply to a message was received.\n",
         "properties": {
           "type": {
             "type": "string",
-            "enum": ["REPLY"]
+            "enum": [
+              "REPLY"
+            ]
           },
           "messageId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "ID of the reply message"
           },
           "message": {
-            "type": "string"
+            "type": "string",
+            "description": "Reply content"
           },
           "chatId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "Chat ID"
           },
           "recipientId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "ID of the recipient"
           },
           "senderId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "ID of the replying user"
           },
           "replyTo": {
-            "$ref": "#/components/schemas/ReplyMessage"
+            "$ref": "#/components/schemas/MessageContent",
+            "description": "The original message being replied to"
           },
           "timeStamp": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "description": "Reply timestamp (ISO 8601)"
           }
         }
       },
-      "WsIncomingTyping": {
+      "WsTypingEvent": {
         "type": "object",
+        "description": "**Received on:** `/user/{userId}/queue/messages`\n\nAnother user is typing in a chat.\n",
         "properties": {
           "type": {
             "type": "string",
-            "enum": ["TYPING"]
+            "enum": [
+              "TYPING"
+            ]
           },
           "chatId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "Chat ID"
           },
           "recipientId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "ID of the recipient"
           },
           "senderId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "ID of the typing user"
+          }
+        }
+      }
+    }
+  },
+  "webhooks": {
+    "sendMessage": {
+      "post": {
+        "summary": "Send Message (STOMP)",
+        "description": "Send a new message to a chat via STOMP to `/api/chat`",
+        "tags": [
+          "WebSocket"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WsSendMessageRequest"
+              },
+              "example": {
+                "type": "SEND_MSG",
+                "senderId": "550e8400-e29b-41d4-a716-446655440000",
+                "message": "Hello, world!",
+                "timeStamp": "2024-01-15T10:30:00Z",
+                "chatId": "660e8400-e29b-41d4-a716-446655440001"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Message sent"
+          }
+        }
+      }
+    },
+    "editMessage": {
+      "post": {
+        "summary": "Edit Message (STOMP)",
+        "description": "Edit an existing message via STOMP to `/api/chat`",
+        "tags": [
+          "WebSocket"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WsEditMessageRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Message edited"
+          }
+        }
+      }
+    },
+    "deleteMessage": {
+      "post": {
+        "summary": "Delete Message (STOMP)",
+        "description": "Delete a message via STOMP to `/api/chat`",
+        "tags": [
+          "WebSocket"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WsDeleteMessageRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Message deleted"
+          }
+        }
+      }
+    },
+    "typing": {
+      "post": {
+        "summary": "Typing Indicator (STOMP)",
+        "description": "Send typing indicator via STOMP to `/api/chat`",
+        "tags": [
+          "WebSocket"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WsTypingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Typing indicator sent"
+          }
+        }
+      }
+    },
+    "react": {
+      "post": {
+        "summary": "React to Message (STOMP)",
+        "description": "Add a reaction to a message via STOMP to `/api/chat`",
+        "tags": [
+          "WebSocket"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WsReactRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reaction added"
+          }
+        }
+      }
+    },
+    "deleteReact": {
+      "post": {
+        "summary": "Remove Reaction (STOMP)",
+        "description": "Remove a reaction via STOMP to `/api/chat`",
+        "tags": [
+          "WebSocket"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WsDeleteReactRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reaction removed"
+          }
+        }
+      }
+    },
+    "reply": {
+      "post": {
+        "summary": "Reply to Message (STOMP)",
+        "description": "Reply to a message via STOMP to `/api/chat`",
+        "tags": [
+          "WebSocket"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WsReplyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reply sent"
+          }
+        }
+      }
+    },
+    "readMessage": {
+      "post": {
+        "summary": "Read Message (STOMP)",
+        "description": "Mark a message as read via STOMP to `/api/chat`",
+        "tags": [
+          "WebSocket"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WsReadMessageRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Read receipt sent"
+          }
+        }
+      }
+    },
+    "onNewMessage": {
+      "post": {
+        "summary": "New Message Event",
+        "description": "Received when a new message arrives on `/user/{userId}/queue/messages`",
+        "tags": [
+          "WebSocket"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WsSendMessageEvent"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Event received"
+          }
+        }
+      }
+    },
+    "onEditMessage": {
+      "post": {
+        "summary": "Message Edited Event",
+        "description": "Received when a message is edited on `/user/{userId}/queue/messages`",
+        "tags": [
+          "WebSocket"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WsEditMessageEvent"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Event received"
+          }
+        }
+      }
+    },
+    "onDeleteMessage": {
+      "post": {
+        "summary": "Message Deleted Event",
+        "description": "Received when a message is deleted on `/user/{userId}/queue/messages`",
+        "tags": [
+          "WebSocket"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WsDeleteMessageEvent"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Event received"
+          }
+        }
+      }
+    },
+    "onUserJoin": {
+      "post": {
+        "summary": "User Joined Event",
+        "description": "Received when a user joins a chat on `/user/{userId}/queue/messages`",
+        "tags": [
+          "WebSocket"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WsUserJoinEvent"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Event received"
+          }
+        }
+      }
+    },
+    "onUserLeave": {
+      "post": {
+        "summary": "User Left Event",
+        "description": "Received when a user leaves a chat on `/user/{userId}/queue/messages`",
+        "tags": [
+          "WebSocket"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WsUserLeaveEvent"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Event received"
+          }
+        }
+      }
+    },
+    "onNewChat": {
+      "post": {
+        "summary": "New Chat Event",
+        "description": "Received when a new chat is created on `/user/{userId}/queue/messages`",
+        "tags": [
+          "WebSocket"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WsNewChatEvent"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Event received"
+          }
+        }
+      }
+    },
+    "onDeleteChat": {
+      "post": {
+        "summary": "Chat Deleted Event",
+        "description": "Received when a chat is deleted on `/user/{userId}/queue/messages`",
+        "tags": [
+          "WebSocket"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WsDeleteChatEvent"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Event received"
+          }
+        }
+      }
+    },
+    "onReadMessage": {
+      "post": {
+        "summary": "Message Read Event",
+        "description": "Received when a message is read on `/user/{userId}/queue/messages`",
+        "tags": [
+          "WebSocket"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WsReadMessageEvent"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Event received"
+          }
+        }
+      }
+    },
+    "onReact": {
+      "post": {
+        "summary": "Reaction Added Event",
+        "description": "Received when a reaction is added on `/user/{userId}/queue/messages`",
+        "tags": [
+          "WebSocket"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WsReactEvent"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Event received"
+          }
+        }
+      }
+    },
+    "onDeleteReact": {
+      "post": {
+        "summary": "Reaction Removed Event",
+        "description": "Received when a reaction is removed on `/user/{userId}/queue/messages`",
+        "tags": [
+          "WebSocket"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WsDeleteReactEvent"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Event received"
+          }
+        }
+      }
+    },
+    "onReply": {
+      "post": {
+        "summary": "Reply Received Event",
+        "description": "Received when a reply is received on `/user/{userId}/queue/messages`",
+        "tags": [
+          "WebSocket"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WsReplyEvent"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Event received"
+          }
+        }
+      }
+    },
+    "onTyping": {
+      "post": {
+        "summary": "Typing Event",
+        "description": "Received when a user is typing on `/user/{userId}/queue/messages`",
+        "tags": [
+          "WebSocket"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WsTypingEvent"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Event received"
           }
         }
       }
