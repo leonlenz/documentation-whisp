@@ -168,6 +168,11 @@
             "bearerAuth": []
           }
         ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AuthorizationHeader"
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -235,6 +240,11 @@
             "bearerAuth": []
           }
         ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AuthorizationHeader"
+          }
+        ],
         "responses": {
           "200": {
             "description": "User deleted successfully."
@@ -273,6 +283,11 @@
             "bearerAuth": []
           }
         ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AuthorizationHeader"
+          }
+        ],
         "responses": {
           "200": {
             "description": "User information retrieved successfully.",
@@ -308,11 +323,16 @@
       "get": {
         "tags": ["User"],
         "summary": "Get WebSocket Ticket",
-        "description": "Fetches a ticket required to open a WebSocket connection.\n\n**Important:** This ticket is very short-lived (approximately 20 seconds by default). Use it immediately to establish the WebSocket connection.\n\nSee the **Whisp AsyncAPI** specification for WebSocket connection details.",
+        "description": "Fetches a ticket required to open a WebSocket connection.\n\n**Important:** This ticket is very short-lived (approximately 20 seconds by default). Use it immediately to establish the WebSocket connection.\n\nSee the **Whisp Real-Time Messaging API** specification for WebSocket connection details.",
         "operationId": "getTicket",
         "security": [
           {
             "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AuthorizationHeader"
           }
         ],
         "responses": {
@@ -358,7 +378,7 @@
             "name": "Authorization",
             "in": "header",
             "required": true,
-            "description": "The refresh token with Bearer prefix (e.g., `Bearer <refresh_token>`)",
+            "description": "The refresh token with Bearer prefix. Format: `Bearer <refresh_token>`",
             "schema": {
               "type": "string",
               "example": "Bearer dGhpcyBpcyBhIHJlZnJlc2ggdG9rZW4..."
@@ -425,6 +445,11 @@
             "bearerAuth": []
           }
         ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AuthorizationHeader"
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -473,6 +498,11 @@
             "bearerAuth": []
           }
         ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AuthorizationHeader"
+          }
+        ],
         "responses": {
           "200": {
             "description": "All refresh tokens invalidated successfully."
@@ -506,6 +536,11 @@
         "security": [
           {
             "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AuthorizationHeader"
           }
         ],
         "requestBody": {
@@ -576,6 +611,9 @@
         ],
         "parameters": [
           {
+            "$ref": "#/components/parameters/AuthorizationHeader"
+          },
+          {
             "name": "page",
             "in": "query",
             "description": "Page number (zero-based)",
@@ -641,6 +679,11 @@
             "bearerAuth": []
           }
         ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AuthorizationHeader"
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -701,6 +744,9 @@
           }
         ],
         "parameters": [
+          {
+            "$ref": "#/components/parameters/AuthorizationHeader"
+          },
           {
             "name": "chatId",
             "in": "path",
@@ -764,6 +810,11 @@
             "bearerAuth": []
           }
         ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AuthorizationHeader"
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -825,6 +876,9 @@
         ],
         "parameters": [
           {
+            "$ref": "#/components/parameters/AuthorizationHeader"
+          },
+          {
             "name": "chatId",
             "in": "query",
             "required": true,
@@ -878,6 +932,11 @@
         "security": [
           {
             "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AuthorizationHeader"
           }
         ],
         "requestBody": {
@@ -940,6 +999,9 @@
           }
         ],
         "parameters": [
+          {
+            "$ref": "#/components/parameters/AuthorizationHeader"
+          },
           {
             "name": "chatId",
             "in": "path",
@@ -1021,7 +1083,7 @@
         "type": "http",
         "scheme": "bearer",
         "bearerFormat": "JWT",
-        "description": "JWT token obtained from sign-in or refresh endpoints. Include in the `Authorization` header as `Bearer <JWT>`. Required for all protected endpoints."
+        "description": "JWT token obtained from sign-in or refresh endpoints. Include in the `Authorization` header as `Bearer <JWT>`."
       },
       "apiKey": {
         "type": "apiKey",
@@ -1039,6 +1101,16 @@
         "schema": {
           "type": "string"
         }
+      },
+      "AuthorizationHeader": {
+        "name": "Authorization",
+        "in": "header",
+        "required": true,
+        "description": "JWT Bearer token. Format: `Bearer <JWT>`",
+        "schema": {
+          "type": "string",
+          "example": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        }
       }
     },
     "schemas": {
@@ -1054,11 +1126,11 @@
           },
           "firstName": {
             "type": "string",
-            "description": "User's first name"
+            "description": "User's first name (optional)"
           },
           "surName": {
             "type": "string",
-            "description": "User's surname/last name"
+            "description": "User's surname/last name (optional)"
           },
           "email": {
             "type": "string",

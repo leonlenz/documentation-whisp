@@ -1,5 +1,5 @@
 {
-  "asyncapi": "3.0.0",
+  "asyncapi": "2.6.0",
   "info": {
     "title": "Whisp Real-Time Messaging API",
     "version": "1.0.0",
@@ -7,165 +7,73 @@
   },
   "servers": {
     "production": {
-      "host": "{clientDomain}.api.whispchat.com",
-      "protocol": "wss",
-      "description": "Production WebSocket server",
+      "url": "wss://{clientDomain}.api.whispchat.com/api/wsConnect",
+      "protocol": "stomp",
+      "description": "Production WebSocket server. Connect using SockJS with a valid ticket query parameter.",
       "variables": {
         "clientDomain": {
           "default": "demo",
           "description": "Client-specific subdomain"
         }
-      },
-      "security": [
-        {
-          "$ref": "#/components/securitySchemes/ticket"
-        },
-        {
-          "$ref": "#/components/securitySchemes/stompmtAuth"
-        }
-      ]
+      }
     }
   },
   "channels": {
-    "userMessages": {
-      "address": "/user/{userId}/queue/messages",
-      "title": "User Message Queue",
-      "description": "## Receiving Real-Time Events\n\nSubscribe to this channel to receive all real-time events for the authenticated user.\n\n### Event Types\n\nThis channel delivers the following event types:\n\n| Event | Description |\n|-------|-------------|\n| `SEND_MSG` | A new message was sent to a chat you're in |\n| `EDIT_MSG` | A message was edited |\n| `DELETE_MSG` | A message was deleted |\n| `USER_JOIN` | A user was added to a chat |\n| `USER_LEAVE` | A user left a chat |\n| `NEW_CHAT` | You were added to a new chat |\n| `DELETE_CHAT` | A chat was deleted |\n| `READ_MSG` | Someone read your message |\n| `REACT` | Someone reacted to a message |\n| `DELETE_REACT` | A reaction was removed |\n| `REPLY` | Someone replied to a message |\n| `TYPING` | Someone is typing |\n\n### Subscription Example\n\n```javascript\nstompClient.subscribe(\n  `/user/${userId}/queue/messages`,\n  (message) => {\n    const event = JSON.parse(message.body);\n    switch(event.type) {\n      case 'SEND_MSG':\n        // Handle new message\n        break;\n      case 'TYPING':\n        // Show typing indicator\n        break;\n      // ... handle other events\n    }\n  }\n);\n```",
+    "/user/{userId}/queue/messages": {
+      "description": "## Receiving Real-Time Events\n\nSubscribe to this channel to receive all real-time events for the authenticated user.\n\n### Event Types\n\n| Event | Description |\n|-------|-------------|\n| `SEND_MSG` | A new message was sent to a chat you're in |\n| `EDIT_MSG` | A message was edited |\n| `DELETE_MSG` | A message was deleted |\n| `USER_JOIN` | A user was added to a chat |\n| `USER_LEAVE` | A user left a chat |\n| `NEW_CHAT` | You were added to a new chat |\n| `DELETE_CHAT` | A chat was deleted |\n| `READ_MSG` | Someone read your message |\n| `REACT` | Someone reacted to a message |\n| `DELETE_REACT` | A reaction was removed |\n| `REPLY` | Someone replied to a message |\n| `TYPING` | Someone is typing |",
       "parameters": {
         "userId": {
-          "description": "The authenticated user's UUID. Must match the user ID from your JWT token."
+          "description": "The authenticated user's UUID. Must match the user ID from your JWT token.",
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
         }
       },
-      "messages": {
-        "sendMsgEvent": {
-          "$ref": "#/components/messages/SendMsgEvent"
-        },
-        "editMsgEvent": {
-          "$ref": "#/components/messages/EditMsgEvent"
-        },
-        "deleteMsgEvent": {
-          "$ref": "#/components/messages/DeleteMsgEvent"
-        },
-        "userJoinEvent": {
-          "$ref": "#/components/messages/UserJoinEvent"
-        },
-        "userLeaveEvent": {
-          "$ref": "#/components/messages/UserLeaveEvent"
-        },
-        "newChatEvent": {
-          "$ref": "#/components/messages/NewChatEvent"
-        },
-        "deleteChatEvent": {
-          "$ref": "#/components/messages/DeleteChatEvent"
-        },
-        "readMsgEvent": {
-          "$ref": "#/components/messages/ReadMsgEvent"
-        },
-        "reactEvent": {
-          "$ref": "#/components/messages/ReactEvent"
-        },
-        "deleteReactEvent": {
-          "$ref": "#/components/messages/DeleteReactEvent"
-        },
-        "replyEvent": {
-          "$ref": "#/components/messages/ReplyEvent"
-        },
-        "typingEvent": {
-          "$ref": "#/components/messages/TypingEvent"
+      "subscribe": {
+        "operationId": "receiveMessages",
+        "summary": "Receive real-time chat events",
+        "description": "Subscribe to this channel after STOMP connection to receive all chat events in real-time.",
+        "message": {
+          "oneOf": [
+            { "$ref": "#/components/messages/SendMsgEvent" },
+            { "$ref": "#/components/messages/EditMsgEvent" },
+            { "$ref": "#/components/messages/DeleteMsgEvent" },
+            { "$ref": "#/components/messages/UserJoinEvent" },
+            { "$ref": "#/components/messages/UserLeaveEvent" },
+            { "$ref": "#/components/messages/NewChatEvent" },
+            { "$ref": "#/components/messages/DeleteChatEvent" },
+            { "$ref": "#/components/messages/ReadMsgEvent" },
+            { "$ref": "#/components/messages/ReactEvent" },
+            { "$ref": "#/components/messages/DeleteReactEvent" },
+            { "$ref": "#/components/messages/ReplyEvent" },
+            { "$ref": "#/components/messages/TypingEvent" }
+          ]
         }
       }
     },
-    "chat": {
-      "address": "/api/chat",
-      "title": "Chat Actions",
-      "description": "## Sending Messages & Actions\n\nSend STOMP messages to this destination to perform chat actions.\n\n### Available Actions\n\n| Action | Description |\n|--------|-------------|\n| `SEND_MSG` | Send a new message to a chat |\n| `EDIT_MSG` | Edit one of your existing messages |\n| `DELETE_MSG` | Delete one of your messages |\n| `TYPING` | Broadcast that you're typing |\n| `REACT` | Add a reaction (emoji) to a message |\n| `DELETE_REACT` | Remove your reaction from a message |\n| `REPLY` | Reply to a specific message |\n| `READ_MSG` | Mark a message as read |\n\n### Send Example\n\n```javascript\n// Send a new message\nstompClient.send('/api/chat', {}, JSON.stringify({\n  type: 'SEND_MSG',\n  senderId: userId,\n  chatId: 'chat-uuid-here',\n  message: 'Hello everyone!',\n  timeStamp: new Date().toISOString()\n}));\n\n// Send typing indicator\nstompClient.send('/api/chat', {}, JSON.stringify({\n  type: 'TYPING',\n  senderId: userId,\n  chatId: 'chat-uuid-here'\n}));\n```\n\n### Important Notes\n\n- All messages must include a valid `type` field\n- The `senderId` must match your authenticated user ID\n- Timestamps should be in ISO 8601 format",
-      "messages": {
-        "sendMsgRequest": {
-          "$ref": "#/components/messages/SendMsgRequest"
-        },
-        "editMsgRequest": {
-          "$ref": "#/components/messages/EditMsgRequest"
-        },
-        "deleteMsgRequest": {
-          "$ref": "#/components/messages/DeleteMsgRequest"
-        },
-        "typingRequest": {
-          "$ref": "#/components/messages/TypingRequest"
-        },
-        "reactRequest": {
-          "$ref": "#/components/messages/ReactRequest"
-        },
-        "deleteReactRequest": {
-          "$ref": "#/components/messages/DeleteReactRequest"
-        },
-        "replyRequest": {
-          "$ref": "#/components/messages/ReplyRequest"
-        },
-        "readMsgRequest": {
-          "$ref": "#/components/messages/ReadMsgRequest"
+    "/api/chat": {
+      "description": "## Sending Messages & Actions\n\nSend STOMP messages to this destination to perform chat actions.\n\n### Available Actions\n\n| Action | Description |\n|--------|-------------|\n| `SEND_MSG` | Send a new message to a chat |\n| `EDIT_MSG` | Edit one of your existing messages |\n| `DELETE_MSG` | Delete one of your messages |\n| `TYPING` | Broadcast that you're typing |\n| `REACT` | Add a reaction (emoji) to a message |\n| `DELETE_REACT` | Remove your reaction from a message |\n| `REPLY` | Reply to a specific message |\n| `READ_MSG` | Mark a message as read |\n\n### Important Notes\n\n- All messages must include a valid `type` field\n- The `senderId` must match your authenticated user ID\n- Timestamps should be in ISO 8601 format",
+      "publish": {
+        "operationId": "sendChatAction",
+        "summary": "Send messages and perform chat actions",
+        "description": "Send STOMP messages to this destination to perform actions like sending messages, editing, deleting, reacting, and indicating typing status.",
+        "message": {
+          "oneOf": [
+            { "$ref": "#/components/messages/SendMsgRequest" },
+            { "$ref": "#/components/messages/EditMsgRequest" },
+            { "$ref": "#/components/messages/DeleteMsgRequest" },
+            { "$ref": "#/components/messages/TypingRequest" },
+            { "$ref": "#/components/messages/ReactRequest" },
+            { "$ref": "#/components/messages/DeleteReactRequest" },
+            { "$ref": "#/components/messages/ReplyRequest" },
+            { "$ref": "#/components/messages/ReadMsgRequest" }
+          ]
         }
       }
-    }
-  },
-  "operations": {
-    "receiveMessages": {
-      "action": "receive",
-      "channel": {
-        "$ref": "#/channels/userMessages"
-      },
-      "title": "Receive Real-Time Events",
-      "summary": "Subscribe to receive all real-time chat events",
-      "description": "## How to Subscribe\n\nAfter establishing a STOMP connection, subscribe to your personal message queue to receive real-time events.\n\n```javascript\nstompClient.subscribe(\n  `/user/${userId}/queue/messages`,\n  handleMessage\n);\n```\n\n## Event Handling\n\nAll events include a `type` field to identify the event type. Your message handler should switch on this field to process different events appropriately.\n\n## Delivery Guarantees\n\n- Events are delivered to all connected clients for the user\n- If disconnected, events are not queued - use the REST API to fetch missed messages\n- Reconnect and resubscribe if the connection drops",
-      "messages": [
-        { "$ref": "#/channels/userMessages/messages/sendMsgEvent" },
-        { "$ref": "#/channels/userMessages/messages/editMsgEvent" },
-        { "$ref": "#/channels/userMessages/messages/deleteMsgEvent" },
-        { "$ref": "#/channels/userMessages/messages/userJoinEvent" },
-        { "$ref": "#/channels/userMessages/messages/userLeaveEvent" },
-        { "$ref": "#/channels/userMessages/messages/newChatEvent" },
-        { "$ref": "#/channels/userMessages/messages/deleteChatEvent" },
-        { "$ref": "#/channels/userMessages/messages/readMsgEvent" },
-        { "$ref": "#/channels/userMessages/messages/reactEvent" },
-        { "$ref": "#/channels/userMessages/messages/deleteReactEvent" },
-        { "$ref": "#/channels/userMessages/messages/replyEvent" },
-        { "$ref": "#/channels/userMessages/messages/typingEvent" }
-      ]
-    },
-    "sendChatAction": {
-      "action": "send",
-      "channel": {
-        "$ref": "#/channels/chat"
-      },
-      "title": "Send Chat Actions",
-      "summary": "Send messages and perform chat actions",
-      "description": "## How to Send\n\nUse the STOMP client's `send` method to dispatch actions to the chat destination.\n\n```javascript\nstompClient.send('/api/chat', {}, JSON.stringify(payload));\n```\n\n## Payload Structure\n\nAll payloads must be JSON objects with at minimum:\n- `type` - The action type (e.g., `SEND_MSG`, `TYPING`)\n- `senderId` - Your user UUID\n\nAdditional fields depend on the action type. See the message schemas below for complete field requirements.\n\n## Validation\n\nThe server validates that:\n- You are a member of the target chat\n- The `senderId` matches your authenticated user\n- Required fields are present and correctly formatted",
-      "messages": [
-        { "$ref": "#/channels/chat/messages/sendMsgRequest" },
-        { "$ref": "#/channels/chat/messages/editMsgRequest" },
-        { "$ref": "#/channels/chat/messages/deleteMsgRequest" },
-        { "$ref": "#/channels/chat/messages/typingRequest" },
-        { "$ref": "#/channels/chat/messages/reactRequest" },
-        { "$ref": "#/channels/chat/messages/deleteReactRequest" },
-        { "$ref": "#/channels/chat/messages/replyRequest" },
-        { "$ref": "#/channels/chat/messages/readMsgRequest" }
-      ]
     }
   },
   "components": {
-    "securitySchemes": {
-      "ticket": {
-        "type": "httpApiKey",
-        "name": "ticket",
-        "in": "query",
-        "description": "Short-lived WebSocket ticket obtained from `GET /api/user/getTicket`. Valid for approximately 20 seconds."
-      },
-      "stompmtAuth": {
-        "type": "httpApiKey",
-        "name": "Authorization",
-        "in": "header",
-        "description": "JWT Bearer token passed as a STOMP header during connection. Format: `Bearer <JWT>`"
-      }
-    },
     "messages": {
       "SendMsgRequest": {
         "name": "SendMsgRequest",

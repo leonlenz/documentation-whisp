@@ -11,8 +11,14 @@ services:
       API_REFERENCE_CONFIG: |
         {
           "sources": [
-            { "url": "https://raw.githubusercontent.com/leonlenz/documentation-whisp/refs/heads/main/openapi.json" },
-            { "url": "https://raw.githubusercontent.com/leonlenz/documentation-whisp/refs/heads/main/asyncapi.json" }
+            { 
+              "url": "https://raw.githubusercontent.com/leonlenz/documentation-whisp/refs/heads/main/openapi.json",
+              "name": "REST API"
+            },
+            { 
+              "url": "https://raw.githubusercontent.com/leonlenz/documentation-whisp/refs/heads/main/asyncapi.json",
+              "name": "Real-Time Messaging"
+            }
           ],
           "theme": "purple"
         }
