@@ -8,11 +8,11 @@ services:
     ports:
       - "127.0.0.1:8080:8080"
     environment:
-  API_REFERENCE_CONFIG: |
-    {
-      "sources": [
-        { "url": "https://raw.githubusercontent.com/leonlenz/documentation-whisp/refs/heads/main/openapi.json" },
-        { "url": "https://raw.githubusercontent.com/leonlenz/documentation-whisp/refs/heads/main/asyncapi.json" }
-      ],
-      "theme": "purple"
-    }
+      API_REFERENCE_CONFIG: |
+        {
+          "sources": [
+            { "url": "https://raw.githubusercontent.com/leonlenz/documentation-whisp/refs/heads/main/openapi.json" },
+            { "url": "https://raw.githubusercontent.com/leonlenz/documentation-whisp/refs/heads/main/asyncapi.json" }
+          ],
+          "theme": "purple"
+        }
