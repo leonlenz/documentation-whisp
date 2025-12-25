@@ -14,6 +14,10 @@ services:
             { 
               "url": "https://raw.githubusercontent.com/leonlenz/documentation-whisp/refs/heads/main/openapi.json",
               "title": "REST API"
+            },
+            { 
+              "url": "https://raw.githubusercontent.com/leonlenz/documentation-whisp/refs/heads/main/websocket-api.json",
+              "title": "Real-Time Messaging"
             }
           ],
           "theme": "purple"
