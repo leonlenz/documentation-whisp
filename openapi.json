@@ -1,631 +1,2248 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Whisp REST API",
+    "title": "Whisp Real-Time Chat API",
     "version": "1.0.0",
-    "description": "REST API for the Whisp Chat platform.\n\n## Authentication\n\nAll protected endpoints require a valid JSON Web Token (JWT) in the `Authorization` header.\n\n**Header format:** `Authorization: Bearer <JWT>`\n\nTokens expire and can be refreshed via `/api/auth/refresh`.\n\n## Real-Time Messaging\n\nFor WebSocket/STOMP real-time messaging, see the **Whisp Real-Time Messaging** documentation."
+    "summary": "REST + WebSocket (STOMP) API for Whisp real-time chat.",
+    "description": "# Getting started\n\nWhisp provides a REST API for identity, chat management, and message history, plus a real-time channel over **STOMP over WebSocket**.\n\n## 1) Authenticate\n\n1. Create a user with `POST /api/user/registerUser` (requires `x-api-key`).\n2. Sign in with `POST /api/user/signin` (requires `x-api-key`).\n   - The response includes a **JWT** in the `Authorization` response header.\n   - The response body includes a **refresh token**.\n\n## 2) Use the REST API\n\nSend the JWT on protected endpoints:\n\n```http\nAuthorization: Bearer <JWT>\n```\n\n## 3) Connect to WebSocket (STOMP)\n\n1. Request a short-lived WebSocket ticket with `GET /api/user/getTicket` (JWT required).\n2. Open the WebSocket connection:\n\n```text\nwss://<client-domain>.api.whispchat.com/api/wsConnect?ticket=<ticket>\n```\n\n3. Establish a STOMP session using header:\n\n```text\nAuthorization: Bearer <JWT>\n```\n\n### Subscribe\n\nSubscribe to receive events:\n\n```text\n/user/{userId}/queue/messages\n```\n\n### Send commands\n\nSend chat commands to:\n\n```text\n/api/chat\n```\n\n## Example (SockJS + stompjs)\n\n```javascript\nimport SockJS from 'sockjs-client';\nimport Stomp from 'stompjs';\n\nconst baseUrl = 'https://<client-domain>.api.whispchat.com';\n\nasync function connectWhisp({ jwt, userId, ticket, onEvent }) {\n  const socket = new SockJS(`${baseUrl}/api/wsConnect?ticket=${ticket}`);\n  const client = Stomp.over(socket);\n\n  await new Promise((resolve, reject) => {\n    client.connect(\n      { Authorization: `Bearer ${jwt}` },\n      () => resolve(),\n      (err) => reject(err)\n    );\n  });\n\n  const sub = client.subscribe(`/user/${userId}/queue/messages`, (frame) => {\n    const event = JSON.parse(frame.body);\n    onEvent(event);\n  });\n\n  return { client, sub };\n}\n```\n\n> Note: If the STOMP connect fails due to an expired JWT, refresh the JWT via `POST /api/auth/refresh`, fetch a new ticket, and reconnect."
   },
   "servers": [
     {
       "url": "https://{clientDomain}.api.whispchat.com",
-      "description": "Production server",
+      "description": "Customer-specific API hostname.",
       "variables": {
         "clientDomain": {
-          "default": "demo",
-          "description": "Client-specific subdomain"
+          "default": "demo-api",
+          "description": "Your customer subdomain (e.g. `demo-api`)."
         }
       }
     }
   ],
   "tags": [
-    { "name": "User", "description": "User management operations" },
-    { "name": "Authentication", "description": "Authentication and token management" },
-    { "name": "Chat", "description": "Chat management operations" },
-    { "name": "Messages", "description": "Message retrieval operations" }
+    {
+      "name": "User",
+      "description": "User registration, login, profile, and ticket issuance."
+    },
+    {
+      "name": "Auth",
+      "description": "JWT refresh and logout."
+    },
+    {
+      "name": "Chat",
+      "description": "Chat creation, membership, and metadata changes."
+    },
+    {
+      "name": "Messages",
+      "description": "Message history retrieval."
+    },
+    {
+      "name": "WebSocket",
+      "description": "STOMP-over-WebSocket handshake and message/event schemas (documented via Markdown and schemas)."
+    }
   ],
-  "paths": {
-    "/api/user/registerUser": {
-      "post": {
-        "tags": ["User"],
-        "summary": "Create User",
-        "description": "Registers a new user account.",
-        "operationId": "registerUser",
-        "security": [],
-        "parameters": [{ "$ref": "#/components/parameters/ApiKeyHeader" }],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/RegisterUserRequest" },
-              "example": {
-                "username": "johndoe",
-                "firstName": "John",
-                "surName": "Doe",
-                "email": "john.doe@example.com",
-                "password": "SecureP@ss123"
-              }
+  "components": {
+    "securitySchemes": {
+      "ApiKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-api-key",
+        "description": "API key required for public onboarding endpoints (register/sign-in)."
+      },
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT access token."
+      },
+      "RefreshTokenAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "Authorization",
+        "description": "Refresh token. Recommended format: `Authorization: Bearer <refreshToken>`."
+      }
+    },
+    "schemas": {
+      "Uuid": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "IsoInstant": {
+        "type": "string",
+        "format": "date-time",
+        "description": "ISO-8601 timestamp."
+      },
+      "ErrorMessage": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ]
+      },
+      "AuthProblemDetails": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "title",
+          "status",
+          "detail",
+          "instance",
+          "code"
+        ]
+      },
+      "RegisterUserRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "surName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string",
+            "format": "password"
+          }
+        },
+        "required": [
+          "username",
+          "firstName",
+          "surName",
+          "email",
+          "password"
+        ]
+      },
+      "SignInRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string",
+            "format": "password"
+          }
+        },
+        "required": [
+          "username",
+          "password"
+        ]
+      },
+      "SignInResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "username": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "refreshToken": {
+            "type": "string"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string"
             }
           }
         },
+        "required": [
+          "id",
+          "username",
+          "email",
+          "refreshToken",
+          "roles"
+        ]
+      },
+      "ChangeUsernameRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "newUsername": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "newUsername"
+        ]
+      },
+      "UserResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "username": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "role": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "username",
+          "email",
+          "role"
+        ]
+      },
+      "TicketResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "ticket": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "ticket"
+        ]
+      },
+      "RefreshJwtRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "expiredJwt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "expiredJwt"
+        ]
+      },
+      "CreateChatRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "chatName": {
+            "type": "string"
+          },
+          "userNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 2
+          }
+        },
+        "required": [
+          "chatName",
+          "userNames"
+        ]
+      },
+      "ChatSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "chatId": {
+            "type": "string",
+            "description": "Chat identifier."
+          },
+          "chatName": {
+            "type": "string"
+          },
+          "groupChat": {
+            "type": "boolean"
+          },
+          "lastMessageTimestamp": {
+            "$ref": "#/components/schemas/IsoInstant"
+          },
+          "lastMessage": {
+            "type": "string"
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/IsoInstant"
+          },
+          "creator": {
+            "$ref": "#/components/schemas/Uuid"
+          }
+        },
+        "required": [
+          "chatId",
+          "chatName",
+          "groupChat",
+          "createdAt",
+          "creator"
+        ]
+      },
+      "CreateChatResponse": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ChatSummary"
+          }
+        ]
+      },
+      "ListChatsResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "chats": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChatSummary"
+            }
+          }
+        },
+        "required": [
+          "chats"
+        ]
+      },
+      "Reaction": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "reactionId": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "chatId": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "messageId": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "senderId": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "reaction": {
+            "type": "string",
+            "description": "Reaction type/emoji."
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/IsoInstant"
+          }
+        },
+        "required": [
+          "reactionId",
+          "chatId",
+          "messageId",
+          "senderId",
+          "reaction",
+          "createdAt"
+        ]
+      },
+      "ReplyToMessage": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "chatId": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "timeStamp": {
+            "$ref": "#/components/schemas/IsoInstant"
+          },
+          "messageId": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "senderId": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "content": {
+            "type": "string"
+          },
+          "edited": {
+            "type": "boolean"
+          },
+          "editedAt": {
+            "$ref": "#/components/schemas/IsoInstant"
+          }
+        },
+        "required": [
+          "chatId",
+          "timeStamp",
+          "messageId",
+          "senderId",
+          "content",
+          "edited"
+        ]
+      },
+      "Message": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "chatId": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "timeStamp": {
+            "$ref": "#/components/schemas/IsoInstant"
+          },
+          "messageId": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "senderId": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "content": {
+            "type": "string"
+          },
+          "edited": {
+            "type": "boolean"
+          },
+          "editedAt": {
+            "$ref": "#/components/schemas/IsoInstant"
+          },
+          "replyTo": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReplyToMessage"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reactions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Reaction"
+            }
+          }
+        },
+        "required": [
+          "chatId",
+          "timeStamp",
+          "messageId",
+          "senderId",
+          "content",
+          "edited",
+          "reactions"
+        ]
+      },
+      "MessagesResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Message"
+            }
+          }
+        },
+        "required": [
+          "messages"
+        ]
+      },
+      "AddUserToChatRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "chatId": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "newUsername": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "chatId",
+          "newUsername"
+        ]
+      },
+      "ChatUser": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "userId": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "username": {
+            "type": "string"
+          },
+          "joinedChatAt": {
+            "$ref": "#/components/schemas/IsoInstant"
+          },
+          "lastSeenMessage": {
+            "$ref": "#/components/schemas/Uuid"
+          }
+        },
+        "required": [
+          "userId",
+          "username",
+          "joinedChatAt",
+          "lastSeenMessage"
+        ]
+      },
+      "UsersInChatResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "users": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChatUser"
+            }
+          }
+        },
+        "required": [
+          "users"
+        ]
+      },
+      "ChangeChatNameRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "chatId": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "newChatName": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "chatId",
+          "newChatName"
+        ]
+      },
+      "RemoveUserFromChatRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "chatId": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "removeUser": {
+            "$ref": "#/components/schemas/Uuid"
+          }
+        },
+        "required": [
+          "chatId",
+          "removeUser"
+        ]
+      },
+      "LogoutRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "refreshToken": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "refreshToken"
+        ]
+      },
+      "ServerEventBase": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "ServerEventSendMsg": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ServerEventBase"
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "const": "SEND_MSG"
+              },
+              "timeStamp": {
+                "$ref": "#/components/schemas/IsoInstant"
+              },
+              "chatId": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "message": {
+                "type": "string"
+              },
+              "messageId": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "recipientId": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "senderId": {
+                "$ref": "#/components/schemas/Uuid"
+              }
+            },
+            "required": [
+              "type",
+              "timeStamp",
+              "chatId",
+              "message",
+              "messageId",
+              "recipientId",
+              "senderId"
+            ]
+          }
+        ]
+      },
+      "ServerEventEditMsg": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ServerEventBase"
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "const": "EDIT_MSG"
+              },
+              "chatId": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "message": {
+                "type": "string",
+                "description": "Edited message content."
+              },
+              "messageId": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "recipientId": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "senderId": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "editedAt": {
+                "$ref": "#/components/schemas/IsoInstant"
+              }
+            },
+            "required": [
+              "type",
+              "chatId",
+              "message",
+              "messageId",
+              "recipientId",
+              "senderId",
+              "editedAt"
+            ]
+          }
+        ]
+      },
+      "ServerEventDeleteMsg": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ServerEventBase"
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "const": "DELETE_MSG"
+              },
+              "chatId": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "messageId": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "recipientId": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "senderId": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "timeStamp": {
+                "$ref": "#/components/schemas/IsoInstant"
+              }
+            },
+            "required": [
+              "type",
+              "chatId",
+              "messageId",
+              "recipientId",
+              "senderId",
+              "timeStamp"
+            ]
+          }
+        ]
+      },
+      "ServerEventUserJoin": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ServerEventBase"
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "const": "USER_JOIN"
+              },
+              "chatId": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "message": {
+                "$ref": "#/components/schemas/Uuid",
+                "description": "ID of the new user."
+              },
+              "username": {
+                "type": "string",
+                "description": "Username of the new user."
+              },
+              "recipientId": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "senderId": {
+                "$ref": "#/components/schemas/Uuid"
+              }
+            },
+            "required": [
+              "type",
+              "chatId",
+              "message",
+              "username",
+              "recipientId",
+              "senderId"
+            ]
+          }
+        ]
+      },
+      "ServerEventUserLeave": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ServerEventBase"
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "const": "USER_LEAVE"
+              },
+              "chatId": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "message": {
+                "type": "string",
+                "description": "Human-readable leave message (e.g. `{username} left the Chat`)."
+              },
+              "recipientId": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "timeStamp": {
+                "$ref": "#/components/schemas/IsoInstant"
+              },
+              "senderId": {
+                "$ref": "#/components/schemas/Uuid"
+              }
+            },
+            "required": [
+              "type",
+              "chatId",
+              "message",
+              "recipientId",
+              "timeStamp",
+              "senderId"
+            ]
+          }
+        ]
+      },
+      "ServerEventNewChat": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ServerEventBase"
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "const": "NEW_CHAT"
+              },
+              "timeStamp": {
+                "$ref": "#/components/schemas/IsoInstant"
+              },
+              "chatId": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "recipientId": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "senderId": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "message": {
+                "type": "string",
+                "description": "Chat name."
+              }
+            },
+            "required": [
+              "type",
+              "timeStamp",
+              "chatId",
+              "recipientId",
+              "senderId",
+              "message"
+            ]
+          }
+        ]
+      },
+      "ServerEventDeleteChat": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ServerEventBase"
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "const": "DELETE_CHAT"
+              },
+              "chatId": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "recipientId": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "senderId": {
+                "$ref": "#/components/schemas/Uuid"
+              }
+            },
+            "required": [
+              "type",
+              "chatId",
+              "recipientId",
+              "senderId"
+            ]
+          }
+        ]
+      },
+      "ServerEventReadMsg": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ServerEventBase"
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "const": "READ_MSG"
+              },
+              "chatId": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "recipientId": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "senderId": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "messageId": {
+                "$ref": "#/components/schemas/Uuid"
+              }
+            },
+            "required": [
+              "type",
+              "chatId",
+              "recipientId",
+              "senderId",
+              "messageId"
+            ]
+          }
+        ]
+      },
+      "ServerEventReact": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ServerEventBase"
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "const": "REACT"
+              },
+              "messageId": {
+                "$ref": "#/components/schemas/Uuid",
+                "description": "Reaction ID."
+              },
+              "message": {
+                "type": "string",
+                "description": "Reaction type/emoji."
+              },
+              "chatId": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "recipientId": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "senderId": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "parentMessageId": {
+                "$ref": "#/components/schemas/Uuid",
+                "description": "Message that was reacted to."
+              },
+              "timeStamp": {
+                "$ref": "#/components/schemas/IsoInstant"
+              }
+            },
+            "required": [
+              "type",
+              "messageId",
+              "message",
+              "chatId",
+              "recipientId",
+              "senderId",
+              "parentMessageId",
+              "timeStamp"
+            ]
+          }
+        ]
+      },
+      "ServerEventDeleteReact": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ServerEventBase"
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "const": "DELETE_REACT"
+              },
+              "messageId": {
+                "$ref": "#/components/schemas/Uuid",
+                "description": "Reaction ID that was deleted."
+              },
+              "chatId": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "recipientId": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "senderId": {
+                "$ref": "#/components/schemas/Uuid"
+              }
+            },
+            "required": [
+              "type",
+              "messageId",
+              "chatId",
+              "recipientId",
+              "senderId"
+            ]
+          }
+        ]
+      },
+      "ServerEventReply": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ServerEventBase"
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "const": "REPLY"
+              },
+              "messageId": {
+                "$ref": "#/components/schemas/Uuid",
+                "description": "ID of the reply message."
+              },
+              "message": {
+                "type": "string",
+                "description": "Reply content."
+              },
+              "chatId": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "recipientId": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "senderId": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "replyTo": {
+                "$ref": "#/components/schemas/ReplyToMessage"
+              },
+              "timeStamp": {
+                "$ref": "#/components/schemas/IsoInstant"
+              }
+            },
+            "required": [
+              "type",
+              "messageId",
+              "message",
+              "chatId",
+              "recipientId",
+              "senderId",
+              "replyTo",
+              "timeStamp"
+            ]
+          }
+        ]
+      },
+      "ServerEventTyping": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ServerEventBase"
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "const": "TYPING"
+              },
+              "chatId": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "recipientId": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "senderId": {
+                "$ref": "#/components/schemas/Uuid"
+              }
+            },
+            "required": [
+              "type",
+              "chatId",
+              "recipientId",
+              "senderId"
+            ]
+          }
+        ]
+      },
+      "ServerEvent": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/ServerEventSendMsg"
+          },
+          {
+            "$ref": "#/components/schemas/ServerEventEditMsg"
+          },
+          {
+            "$ref": "#/components/schemas/ServerEventDeleteMsg"
+          },
+          {
+            "$ref": "#/components/schemas/ServerEventUserJoin"
+          },
+          {
+            "$ref": "#/components/schemas/ServerEventUserLeave"
+          },
+          {
+            "$ref": "#/components/schemas/ServerEventNewChat"
+          },
+          {
+            "$ref": "#/components/schemas/ServerEventDeleteChat"
+          },
+          {
+            "$ref": "#/components/schemas/ServerEventReadMsg"
+          },
+          {
+            "$ref": "#/components/schemas/ServerEventReact"
+          },
+          {
+            "$ref": "#/components/schemas/ServerEventDeleteReact"
+          },
+          {
+            "$ref": "#/components/schemas/ServerEventReply"
+          },
+          {
+            "$ref": "#/components/schemas/ServerEventTyping"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "type",
+          "mapping": {
+            "SEND_MSG": "#/components/schemas/ServerEventSendMsg",
+            "EDIT_MSG": "#/components/schemas/ServerEventEditMsg",
+            "DELETE_MSG": "#/components/schemas/ServerEventDeleteMsg",
+            "USER_JOIN": "#/components/schemas/ServerEventUserJoin",
+            "USER_LEAVE": "#/components/schemas/ServerEventUserLeave",
+            "NEW_CHAT": "#/components/schemas/ServerEventNewChat",
+            "DELETE_CHAT": "#/components/schemas/ServerEventDeleteChat",
+            "READ_MSG": "#/components/schemas/ServerEventReadMsg",
+            "REACT": "#/components/schemas/ServerEventReact",
+            "DELETE_REACT": "#/components/schemas/ServerEventDeleteReact",
+            "REPLY": "#/components/schemas/ServerEventReply",
+            "TYPING": "#/components/schemas/ServerEventTyping"
+          }
+        }
+      },
+      "ClientCommandBase": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "senderId": {
+            "$ref": "#/components/schemas/Uuid"
+          }
+        },
+        "required": [
+          "type",
+          "senderId"
+        ]
+      },
+      "ClientCommandSendMsg": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ClientCommandBase"
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "const": "SEND_MSG"
+              },
+              "senderId": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "message": {
+                "type": "string"
+              },
+              "timeStamp": {
+                "$ref": "#/components/schemas/IsoInstant"
+              },
+              "chatId": {
+                "$ref": "#/components/schemas/Uuid"
+              }
+            },
+            "required": [
+              "type",
+              "senderId",
+              "message",
+              "timeStamp",
+              "chatId"
+            ]
+          }
+        ]
+      },
+      "ClientCommandEditMsg": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ClientCommandBase"
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "const": "EDIT_MSG"
+              },
+              "senderId": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "message": {
+                "type": "string"
+              },
+              "messageId": {
+                "$ref": "#/components/schemas/Uuid",
+                "description": "ID of the message being edited."
+              },
+              "chatId": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "timeStamp": {
+                "$ref": "#/components/schemas/IsoInstant",
+                "description": "Timestamp of the edit, not the original message timestamp."
+              }
+            },
+            "required": [
+              "type",
+              "senderId",
+              "message",
+              "messageId",
+              "chatId",
+              "timeStamp"
+            ]
+          }
+        ]
+      },
+      "ClientCommandDeleteMsg": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ClientCommandBase"
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "const": "DELETE_MSG"
+              },
+              "senderId": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "chatId": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "messageId": {
+                "$ref": "#/components/schemas/Uuid"
+              }
+            },
+            "required": [
+              "type",
+              "senderId",
+              "chatId",
+              "messageId"
+            ]
+          }
+        ]
+      },
+      "ClientCommandTyping": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ClientCommandBase"
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "const": "TYPING"
+              },
+              "senderId": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "chatId": {
+                "$ref": "#/components/schemas/Uuid"
+              }
+            },
+            "required": [
+              "type",
+              "senderId",
+              "chatId"
+            ]
+          }
+        ]
+      },
+      "ClientCommandReact": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ClientCommandBase"
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "const": "REACT"
+              },
+              "senderId": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "chatId": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "messageId": {
+                "$ref": "#/components/schemas/Uuid",
+                "description": "ID of the message being reacted to."
+              },
+              "reaction": {
+                "type": "string"
+              },
+              "timeStamp": {
+                "$ref": "#/components/schemas/IsoInstant"
+              }
+            },
+            "required": [
+              "type",
+              "senderId",
+              "chatId",
+              "messageId",
+              "reaction",
+              "timeStamp"
+            ]
+          }
+        ]
+      },
+      "ClientCommandDeleteReact": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ClientCommandBase"
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "const": "DELETE_REACT"
+              },
+              "senderId": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "reactionId": {
+                "$ref": "#/components/schemas/Uuid"
+              }
+            },
+            "required": [
+              "type",
+              "senderId",
+              "reactionId"
+            ]
+          }
+        ]
+      },
+      "ClientCommandReply": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ClientCommandBase"
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "const": "REPLY"
+              },
+              "senderId": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "chatId": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "messageId": {
+                "$ref": "#/components/schemas/Uuid",
+                "description": "ID of the message being replied to."
+              },
+              "message": {
+                "type": "string",
+                "description": "Reply content."
+              },
+              "timeStamp": {
+                "$ref": "#/components/schemas/IsoInstant"
+              }
+            },
+            "required": [
+              "type",
+              "senderId",
+              "chatId",
+              "messageId",
+              "message",
+              "timeStamp"
+            ]
+          }
+        ]
+      },
+      "ClientCommandReadMsg": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ClientCommandBase"
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "const": "READ_MSG"
+              },
+              "senderId": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "chatId": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "messageId": {
+                "$ref": "#/components/schemas/Uuid"
+              }
+            },
+            "required": [
+              "type",
+              "senderId",
+              "chatId",
+              "messageId"
+            ]
+          }
+        ]
+      },
+      "ClientChatCommand": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/ClientCommandSendMsg"
+          },
+          {
+            "$ref": "#/components/schemas/ClientCommandEditMsg"
+          },
+          {
+            "$ref": "#/components/schemas/ClientCommandDeleteMsg"
+          },
+          {
+            "$ref": "#/components/schemas/ClientCommandTyping"
+          },
+          {
+            "$ref": "#/components/schemas/ClientCommandReact"
+          },
+          {
+            "$ref": "#/components/schemas/ClientCommandDeleteReact"
+          },
+          {
+            "$ref": "#/components/schemas/ClientCommandReply"
+          },
+          {
+            "$ref": "#/components/schemas/ClientCommandReadMsg"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "type",
+          "mapping": {
+            "SEND_MSG": "#/components/schemas/ClientCommandSendMsg",
+            "EDIT_MSG": "#/components/schemas/ClientCommandEditMsg",
+            "DELETE_MSG": "#/components/schemas/ClientCommandDeleteMsg",
+            "TYPING": "#/components/schemas/ClientCommandTyping",
+            "REACT": "#/components/schemas/ClientCommandReact",
+            "DELETE_REACT": "#/components/schemas/ClientCommandDeleteReact",
+            "REPLY": "#/components/schemas/ClientCommandReply",
+            "READ_MSG": "#/components/schemas/ClientCommandReadMsg"
+          }
+        }
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "Invalid/expired token. See `AuthProblemDetails`.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/AuthProblemDetails"
+            }
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/api/user/registerUser": {
+      "post": {
+        "tags": [
+          "User"
+        ],
+        "summary": "Create User",
+        "description": "Registers a new user.",
+        "security": [
+          {
+            "ApiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Content-Type",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            },
+            "description": "Must be `application/json`."
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterUserRequest"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
-          "201": { "description": "User created successfully." },
+          "201": {
+            "description": "Created"
+          },
           "400": {
-            "description": "Invalid request - validation failed.",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorMessage" } } }
+            "description": "Invalid request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
           }
         }
       }
     },
     "/api/user/signin": {
       "post": {
-        "tags": ["User"],
+        "tags": [
+          "User"
+        ],
         "summary": "Sign In",
-        "description": "Authenticates a user and issues a JWT in the response header and a refresh token in the response body.",
-        "operationId": "signIn",
-        "security": [],
-        "parameters": [{ "$ref": "#/components/parameters/ApiKeyHeader" }],
+        "description": "Issues a JWT in the response header and a refresh token in the response body.",
+        "security": [
+          {
+            "ApiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Content-Type",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            },
+            "description": "Must be `application/json`."
+          }
+        ],
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/SignInRequest" },
-              "example": { "username": "johndoe", "password": "SecureP@ss123" }
+              "schema": {
+                "$ref": "#/components/schemas/SignInRequest"
+              }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
           "200": {
-            "description": "Successfully signed in.",
+            "description": "Signed in.",
             "headers": {
               "Authorization": {
-                "description": "JWT token prefixed with `Bearer `",
-                "schema": { "type": "string", "example": "Bearer eyJhbGciOiJIUzI1NiJ9..." }
+                "description": "JWT access token. Format: `Bearer <JWT>`.",
+                "schema": {
+                  "type": "string"
+                }
               }
             },
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SignInResponse" } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignInResponse"
+                }
+              }
+            }
           },
-          "401": { "description": "Invalid credentials." }
+          "401": {
+            "description": "Credentials invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          }
         }
       }
     },
     "/api/user/changeUsername": {
       "post": {
-        "tags": ["User"],
+        "tags": [
+          "User"
+        ],
         "summary": "Change Username",
-        "description": "Changes the authenticated user's username. A new JWT is returned in the Authorization header.",
-        "operationId": "changeUsername",
-        "security": [{ "bearerAuth": [] }],
-        "parameters": [{ "$ref": "#/components/parameters/AuthorizationHeader" }],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "JWT access token. Format: `Bearer <JWT>`."
+          }
+        ],
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/ChangeUsernameRequest" },
-              "example": { "newUsername": "johndoe_updated" }
+              "schema": {
+                "$ref": "#/components/schemas/ChangeUsernameRequest"
+              }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
           "200": {
-            "description": "Username changed successfully.",
+            "description": "Username changed. A new JWT is returned in the `Authorization` response header.",
             "headers": {
-              "Authorization": { "description": "New JWT token", "schema": { "type": "string" } }
+              "Authorization": {
+                "description": "New JWT access token. Format: `Bearer <JWT>`.",
+                "schema": {
+                  "type": "string"
+                }
+              }
             }
           },
-          "400": { "description": "Username has incorrect format or already exists." },
-          "401": { "$ref": "#/components/responses/Unauthorized" }
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "400": {
+            "description": "Username invalid format or already exists.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          }
         }
       }
     },
     "/api/user/deleteUser": {
       "delete": {
-        "tags": ["User"],
+        "tags": [
+          "User"
+        ],
         "summary": "Delete User",
-        "description": "Deletes the authenticated user including all their data and messages.",
-        "operationId": "deleteUser",
-        "security": [{ "bearerAuth": [] }],
-        "parameters": [{ "$ref": "#/components/parameters/AuthorizationHeader" }],
+        "description": "Deletes the authenticated user, including all their data and messages.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "JWT access token. Format: `Bearer <JWT>`."
+          }
+        ],
         "responses": {
-          "200": { "description": "User deleted successfully." },
-          "401": { "$ref": "#/components/responses/Unauthorized" }
+          "200": {
+            "description": "User deleted."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error."
+          }
         }
       }
     },
     "/api/user/getUser": {
       "get": {
-        "tags": ["User"],
+        "tags": [
+          "User"
+        ],
         "summary": "Get Current User",
-        "description": "Fetches the authenticated user's information.",
-        "operationId": "getUser",
-        "security": [{ "bearerAuth": [] }],
-        "parameters": [{ "$ref": "#/components/parameters/AuthorizationHeader" }],
+        "description": "Fetches authenticated user info.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "JWT access token. Format: `Bearer <JWT>`."
+          }
+        ],
         "responses": {
           "200": {
-            "description": "User information retrieved successfully.",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UserInfo" } } }
+            "description": "User information.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
           },
-          "401": { "$ref": "#/components/responses/Unauthorized" }
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
         }
       }
     },
     "/api/user/getTicket": {
       "get": {
-        "tags": ["User"],
+        "tags": [
+          "User"
+        ],
         "summary": "Get WebSocket Ticket",
-        "description": "Fetches a ticket required to open a WebSocket connection.\n\n**Important:** This ticket is very short-lived (~20 seconds). Use it immediately to establish the WebSocket connection.",
-        "operationId": "getTicket",
-        "security": [{ "bearerAuth": [] }],
-        "parameters": [{ "$ref": "#/components/parameters/AuthorizationHeader" }],
+        "description": "Returns a short-lived ticket required to open a WebSocket connection (typically ~20 seconds).",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "JWT access token. Format: `Bearer <JWT>`."
+          }
+        ],
         "responses": {
           "200": {
-            "description": "WebSocket ticket retrieved successfully.",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TicketResponse" } } }
+            "description": "Ticket issued.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketResponse"
+                }
+              }
+            }
           },
-          "401": { "$ref": "#/components/responses/Unauthorized" }
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
         }
       }
     },
     "/api/auth/refresh": {
       "post": {
-        "tags": ["Authentication"],
+        "tags": [
+          "Auth"
+        ],
         "summary": "Refresh JWT",
-        "description": "Renews an expired JWT using a refresh token.",
-        "operationId": "refreshToken",
-        "security": [],
-        "parameters": [{
-          "name": "Authorization",
-          "in": "header",
-          "required": true,
-          "description": "The refresh token with Bearer prefix. Format: `Bearer <refresh_token>`",
-          "schema": { "type": "string", "example": "Bearer dGhpcyBpcyBhIHJlZnJlc2ggdG9rZW4..." }
-        }],
+        "description": "Renews JWT using a refresh token. Include the expired JWT in the request body.",
+        "security": [
+          {
+            "RefreshTokenAuth": []
+          }
+        ],
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/RefreshTokenRequest" },
-              "example": { "expiredJwt": "eyJhbGciOiJIUzI1NiJ9..." }
+              "schema": {
+                "$ref": "#/components/schemas/RefreshJwtRequest"
+              }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
           "200": {
-            "description": "JWT refreshed successfully.",
-            "headers": { "Authorization": { "description": "New JWT token", "schema": { "type": "string" } } }
+            "description": "New JWT issued.",
+            "headers": {
+              "Authorization": {
+                "description": "New JWT access token. Format: `Bearer <JWT>`.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
           },
-          "401": { "description": "Invalid or expired refresh token." }
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "400": {
+            "description": "Body incorrect format.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          }
         }
       }
     },
     "/api/auth/logout": {
       "post": {
-        "tags": ["Authentication"],
+        "tags": [
+          "Auth"
+        ],
         "summary": "Logout",
-        "description": "Invalidates a specific refresh token.",
-        "operationId": "logout",
-        "security": [{ "bearerAuth": [] }],
-        "parameters": [{ "$ref": "#/components/parameters/AuthorizationHeader" }],
+        "description": "Invalidates a refresh token.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/LogoutRequest" },
-              "example": { "refreshToken": "dGhpcyBpcyBhIHJlZnJlc2ggdG9rZW4..." }
+              "schema": {
+                "$ref": "#/components/schemas/LogoutRequest"
+              }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
-          "200": { "description": "Refresh token invalidated successfully." },
-          "401": { "$ref": "#/components/responses/Unauthorized" }
+          "200": {
+            "description": "Token invalidated."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
         }
       }
     },
     "/api/auth/logoutAll": {
       "post": {
-        "tags": ["Authentication"],
-        "summary": "Logout All Sessions",
-        "description": "Invalidates all refresh tokens for the authenticated user.",
-        "operationId": "logoutAll",
-        "security": [{ "bearerAuth": [] }],
-        "parameters": [{ "$ref": "#/components/parameters/AuthorizationHeader" }],
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Logout All",
+        "description": "Invalidates all refresh tokens for the user (logs out all sessions).",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "responses": {
-          "200": { "description": "All refresh tokens invalidated successfully." },
-          "401": { "$ref": "#/components/responses/Unauthorized" }
+          "200": {
+            "description": "All refresh tokens invalidated."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
         }
       }
     },
     "/api/chat/createChat": {
       "post": {
-        "tags": ["Chat"],
+        "tags": [
+          "Chat"
+        ],
         "summary": "Create Chat",
-        "description": "Creates a new chat with two or more users.",
-        "operationId": "createChat",
-        "security": [{ "bearerAuth": [] }],
-        "parameters": [{ "$ref": "#/components/parameters/AuthorizationHeader" }],
+        "description": "Creates a chat with two or more users.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/CreateChatRequest" },
-              "example": { "chatName": "Project Discussion", "userNames": ["johndoe", "janedoe", "bobsmith"] }
+              "schema": {
+                "$ref": "#/components/schemas/CreateChatRequest"
+              }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
           "201": {
-            "description": "Chat created successfully.",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ChatDetails" } } }
+            "description": "Chat created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateChatResponse"
+                }
+              }
+            }
           },
-          "400": { "description": "Invalid usernames, own username not included, or invalid chat name format." },
-          "401": { "$ref": "#/components/responses/Unauthorized" }
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "400": {
+            "description": "Invalid usernames, own username not included, or chat name invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            }
+          }
         }
       }
     },
     "/api/chat/getChats": {
       "get": {
-        "tags": ["Chat"],
+        "tags": [
+          "Chat"
+        ],
         "summary": "List Chats",
-        "description": "Returns all chats for the authenticated user with pagination support.",
-        "operationId": "getChats",
-        "security": [{ "bearerAuth": [] }],
+        "description": "Returns chats for the authenticated user. Supports pagination.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "parameters": [
-          { "$ref": "#/components/parameters/AuthorizationHeader" },
-          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 0 } },
-          { "name": "size", "in": "query", "schema": { "type": "integer", "default": 20 } }
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "description": "Optional page index (0-based)."
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            },
+            "description": "Optional page size."
+          }
         ],
         "responses": {
           "200": {
-            "description": "List of chats retrieved successfully.",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ChatsListResponse" } } }
+            "description": "Chats returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListChatsResponse"
+                }
+              }
+            }
           },
-          "401": { "$ref": "#/components/responses/Unauthorized" }
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
         }
       }
     },
     "/api/chat/addUser": {
       "post": {
-        "tags": ["Chat"],
+        "tags": [
+          "Chat"
+        ],
         "summary": "Add User to Chat",
         "description": "Adds a user to an existing chat.",
-        "operationId": "addUserToChat",
-        "security": [{ "bearerAuth": [] }],
-        "parameters": [{ "$ref": "#/components/parameters/AuthorizationHeader" }],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/AddUserRequest" },
-              "example": { "chatId": "550e8400-e29b-41d4-a716-446655440000", "newUsername": "newuser" }
+              "schema": {
+                "$ref": "#/components/schemas/AddUserToChatRequest"
+              }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
-          "200": { "description": "User added to chat successfully." },
-          "400": { "description": "User not in chat, invalid username, user already in chat, or chat doesn't exist." },
-          "401": { "$ref": "#/components/responses/Unauthorized" }
+          "200": {
+            "description": "User added to chat."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "400": {
+            "description": "User not in chat, new username invalid, user already in chat, or chat does not exist."
+          }
         }
       }
     },
     "/api/chat/getUsers/{chatId}": {
       "get": {
-        "tags": ["Chat"],
+        "tags": [
+          "Chat"
+        ],
         "summary": "Get Users in Chat",
-        "description": "Lists all users in a chat.",
-        "operationId": "getChatUsers",
-        "security": [{ "bearerAuth": [] }],
+        "description": "Lists users in a chat, including join time and last seen message.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "parameters": [
-          { "$ref": "#/components/parameters/AuthorizationHeader" },
-          { "name": "chatId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+          {
+            "name": "chatId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Uuid"
+            },
+            "description": "Chat ID."
+          }
         ],
         "responses": {
           "200": {
-            "description": "User list retrieved successfully.",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ChatUsersResponse" } } }
+            "description": "Users returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsersInChatResponse"
+                }
+              }
+            }
           },
-          "400": { "description": "User not in chat or chat doesn't exist." },
-          "401": { "$ref": "#/components/responses/Unauthorized" }
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "400": {
+            "description": "User not in chat or chat does not exist."
+          }
         }
       }
     },
     "/api/chat/changeName": {
       "post": {
-        "tags": ["Chat"],
+        "tags": [
+          "Chat"
+        ],
         "summary": "Change Chat Name",
         "description": "Changes the name of an existing chat.",
-        "operationId": "changeChatName",
-        "security": [{ "bearerAuth": [] }],
-        "parameters": [{ "$ref": "#/components/parameters/AuthorizationHeader" }],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/ChangeChatNameRequest" },
-              "example": { "chatId": "550e8400-e29b-41d4-a716-446655440000", "newChatName": "Updated Name" }
+              "schema": {
+                "$ref": "#/components/schemas/ChangeChatNameRequest"
+              }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
-          "200": { "description": "Chat name changed successfully." },
-          "400": { "description": "User not in chat or chat doesn't exist." },
-          "401": { "$ref": "#/components/responses/Unauthorized" }
+          "200": {
+            "description": "Chat name changed."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "400": {
+            "description": "User not in chat or chat does not exist."
+          }
         }
       }
     },
     "/api/chat/deleteChat": {
       "delete": {
-        "tags": ["Chat"],
+        "tags": [
+          "Chat"
+        ],
         "summary": "Delete Chat",
-        "description": "Deletes a chat. Only the creator can perform this action.",
-        "operationId": "deleteChat",
-        "security": [{ "bearerAuth": [] }],
+        "description": "Deletes a chat. Only the creator can delete it.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "parameters": [
-          { "$ref": "#/components/parameters/AuthorizationHeader" },
-          { "name": "chatId", "in": "query", "required": true, "schema": { "type": "string", "format": "uuid" } }
+          {
+            "name": "chatId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Uuid"
+            },
+            "description": "Chat ID to delete."
+          }
         ],
         "responses": {
-          "200": { "description": "Chat deleted successfully." },
-          "400": { "description": "User not in chat, not the creator, or chat doesn't exist." },
-          "401": { "$ref": "#/components/responses/Unauthorized" }
+          "200": {
+            "description": "Chat deleted."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "400": {
+            "description": "User not in chat or chat does not exist."
+          }
         }
       }
     },
     "/api/chat/removeUser": {
       "post": {
-        "tags": ["Chat"],
+        "tags": [
+          "Chat"
+        ],
         "summary": "Remove User from Chat",
-        "description": "Removes a user from a chat (leave chat). If the creator leaves, ownership transfers to the longest-tenured member.",
-        "operationId": "removeUserFromChat",
-        "security": [{ "bearerAuth": [] }],
-        "parameters": [{ "$ref": "#/components/parameters/AuthorizationHeader" }],
+        "description": "Leaves a chat. If the creator leaves, ownership transfers to the longest-tenured member. At the moment, users cannot remove other users.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/RemoveUserRequest" },
-              "example": { "chatId": "550e8400-e29b-41d4-a716-446655440000", "removeUser": "660e8400-e29b-41d4-a716-446655440001" }
+              "schema": {
+                "$ref": "#/components/schemas/RemoveUserFromChatRequest"
+              }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
-          "200": { "description": "User removed from chat successfully." },
-          "400": { "description": "User not in chat or not authorized to remove." },
-          "401": { "$ref": "#/components/responses/Unauthorized" }
+          "200": {
+            "description": "User list updated."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "400": {
+            "description": "User not in chat or request not made by the leaving user."
+          }
         }
       }
     },
     "/api/messages/getMessages/{chatId}": {
       "get": {
-        "tags": ["Messages"],
+        "tags": [
+          "Messages"
+        ],
         "summary": "Get Messages",
-        "description": "Fetches messages for a specific chat with pagination.\n\n**Note:** This endpoint automatically triggers a read receipt on the last message.",
-        "operationId": "getMessages",
-        "security": [{ "bearerAuth": [] }],
+        "description": "Fetches messages for a chat. Supports pagination using `size` and `lastMessage` query params.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "parameters": [
-          { "$ref": "#/components/parameters/AuthorizationHeader" },
-          { "name": "chatId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
-          { "name": "size", "in": "query", "schema": { "type": "integer", "default": 50 } },
-          { "name": "lastMessage", "in": "query", "description": "Message ID for cursor-based pagination", "schema": { "type": "string", "format": "uuid" } }
+          {
+            "name": "chatId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Uuid"
+            },
+            "description": "Chat ID."
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            },
+            "description": "Maximum number of messages to return."
+          },
+          {
+            "name": "lastMessage",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Uuid"
+            },
+            "description": "Message ID cursor for pagination (return messages before/after this cursor depending on server implementation)."
+          }
         ],
         "responses": {
           "200": {
-            "description": "Messages retrieved successfully.",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MessagesResponse" } } }
-          },
-          "400": { "description": "User not in chat or chat doesn't exist." },
-          "401": { "$ref": "#/components/responses/Unauthorized" }
-        }
-      }
-    }
-  },
-  "components": {
-    "securitySchemes": {
-      "bearerAuth": {
-        "type": "http",
-        "scheme": "bearer",
-        "bearerFormat": "JWT",
-        "description": "JWT token. Include as `Authorization: Bearer <JWT>`"
-      },
-      "apiKey": {
-        "type": "apiKey",
-        "in": "header",
-        "name": "x-api-key",
-        "description": "API key for unauthenticated endpoints"
-      }
-    },
-    "parameters": {
-      "ApiKeyHeader": {
-        "name": "x-api-key",
-        "in": "header",
-        "required": true,
-        "description": "API key for authentication",
-        "schema": { "type": "string" }
-      },
-      "AuthorizationHeader": {
-        "name": "Authorization",
-        "in": "header",
-        "required": true,
-        "description": "JWT Bearer token. Format: `Bearer <JWT>`",
-        "schema": { "type": "string", "example": "Bearer eyJhbGciOiJIUzI1NiJ9..." }
-      }
-    },
-    "responses": {
-      "Unauthorized": {
-        "description": "Invalid or expired JWT.",
-        "headers": { "WWW-Authenticate": { "schema": { "type": "string" } } },
-        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AuthErrorResponse" } } }
-      }
-    },
-    "schemas": {
-      "RegisterUserRequest": {
-        "type": "object",
-        "required": ["username", "email", "password"],
-        "properties": {
-          "username": { "type": "string", "minLength": 3, "maxLength": 50 },
-          "firstName": { "type": "string", "description": "Optional" },
-          "surName": { "type": "string", "description": "Optional" },
-          "email": { "type": "string", "format": "email" },
-          "password": { "type": "string", "format": "password", "minLength": 8 }
-        }
-      },
-      "SignInRequest": {
-        "type": "object",
-        "required": ["username", "password"],
-        "properties": {
-          "username": { "type": "string" },
-          "password": { "type": "string", "format": "password" }
-        }
-      },
-      "ChangeUsernameRequest": {
-        "type": "object",
-        "required": ["newUsername"],
-        "properties": { "newUsername": { "type": "string", "minLength": 3, "maxLength": 50 } }
-      },
-      "RefreshTokenRequest": {
-        "type": "object",
-        "required": ["expiredJwt"],
-        "properties": { "expiredJwt": { "type": "string" } }
-      },
-      "LogoutRequest": {
-        "type": "object",
-        "required": ["refreshToken"],
-        "properties": { "refreshToken": { "type": "string" } }
-      },
-      "CreateChatRequest": {
-        "type": "object",
-        "required": ["chatName", "userNames"],
-        "properties": {
-          "chatName": { "type": "string" },
-          "userNames": { "type": "array", "items": { "type": "string" }, "minItems": 2 }
-        }
-      },
-      "AddUserRequest": {
-        "type": "object",
-        "required": ["chatId", "newUsername"],
-        "properties": {
-          "chatId": { "type": "string", "format": "uuid" },
-          "newUsername": { "type": "string" }
-        }
-      },
-      "ChangeChatNameRequest": {
-        "type": "object",
-        "required": ["chatId", "newChatName"],
-        "properties": {
-          "chatId": { "type": "string", "format": "uuid" },
-          "newChatName": { "type": "string" }
-        }
-      },
-      "RemoveUserRequest": {
-        "type": "object",
-        "required": ["chatId", "removeUser"],
-        "properties": {
-          "chatId": { "type": "string", "format": "uuid" },
-          "removeUser": { "type": "string", "format": "uuid" }
-        }
-      },
-      "SignInResponse": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "string", "format": "uuid" },
-          "username": { "type": "string" },
-          "email": { "type": "string", "format": "email" },
-          "refreshToken": { "type": "string" },
-          "roles": { "type": "array", "items": { "type": "string", "enum": ["USER", "ADMIN"] } }
-        }
-      },
-      "UserInfo": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "string", "format": "uuid" },
-          "username": { "type": "string" },
-          "email": { "type": "string", "format": "email" },
-          "role": { "type": "array", "items": { "type": "string", "enum": ["USER", "ADMIN"] } }
-        }
-      },
-      "TicketResponse": {
-        "type": "object",
-        "properties": { "ticket": { "type": "string", "description": "Short-lived ticket (~20 seconds)" } }
-      },
-      "ChatDetails": {
-        "type": "object",
-        "properties": {
-          "chatId": { "type": "string", "format": "uuid" },
-          "chatName": { "type": "string" },
-          "lastMessageTimestamp": { "type": "string", "format": "date-time" },
-          "lastMessage": { "type": "string" },
-          "createdAt": { "type": "string", "format": "date-time" },
-          "creator": { "type": "string", "format": "uuid" },
-          "groupChat": { "type": "boolean" }
-        }
-      },
-      "ChatsListResponse": {
-        "type": "object",
-        "properties": { "chats": { "type": "array", "items": { "$ref": "#/components/schemas/ChatDetails" } } }
-      },
-      "ChatUserInfo": {
-        "type": "object",
-        "properties": {
-          "userId": { "type": "string", "format": "uuid" },
-          "username": { "type": "string" },
-          "joinedChatAt": { "type": "string", "format": "date-time" },
-          "lastSeenMessage": { "type": "string", "format": "uuid" }
-        }
-      },
-      "ChatUsersResponse": {
-        "type": "object",
-        "properties": { "users": { "type": "array", "items": { "$ref": "#/components/schemas/ChatUserInfo" } } }
-      },
-      "Reaction": {
-        "type": "object",
-        "properties": {
-          "reactionId": { "type": "string", "format": "uuid" },
-          "chatId": { "type": "string", "format": "uuid" },
-          "messageId": { "type": "string", "format": "uuid" },
-          "senderId": { "type": "string", "format": "uuid" },
-          "reaction": { "type": "string" },
-          "createdAt": { "type": "string", "format": "date-time" }
-        }
-      },
-      "MessageContent": {
-        "type": "object",
-        "properties": {
-          "chatId": { "type": "string", "format": "uuid" },
-          "timeStamp": { "type": "string", "format": "date-time" },
-          "messageId": { "type": "string", "format": "uuid" },
-          "senderId": { "type": "string", "format": "uuid" },
-          "content": { "type": "string" },
-          "edited": { "type": "boolean" },
-          "editedAt": { "type": "string", "format": "date-time", "nullable": true }
-        }
-      },
-      "Message": {
-        "allOf": [
-          { "$ref": "#/components/schemas/MessageContent" },
-          {
-            "type": "object",
-            "properties": {
-              "replyTo": { "$ref": "#/components/schemas/MessageContent", "nullable": true },
-              "reactions": { "type": "array", "items": { "$ref": "#/components/schemas/Reaction" } }
+            "description": "Messages returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessagesResponse"
+                }
+              }
             }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "400": {
+            "description": "User is not in the given chat or chat does not exist."
           }
-        ]
-      },
-      "MessagesResponse": {
-        "type": "object",
-        "properties": { "messages": { "type": "array", "items": { "$ref": "#/components/schemas/Message" } } }
-      },
-      "ErrorMessage": {
-        "type": "object",
-        "properties": { "message": { "type": "string" } }
-      },
-      "AuthErrorResponse": {
-        "type": "object",
-        "properties": {
-          "type": { "type": "string" },
-          "title": { "type": "string" },
-          "status": { "type": "string" },
-          "detail": { "type": "string" },
-          "instance": { "type": "string" },
-          "code": { "type": "string" }
+        }
+      }
+    },
+    "/api/wsConnect": {
+      "get": {
+        "tags": [
+          "WebSocket"
+        ],
+        "summary": "WebSocket endpoint (STOMP)",
+        "description": "This endpoint upgrades to a WebSocket connection and then uses **STOMP** frames for real-time messaging.\n\n## Handshake\n\n- URL: `wss://<client-domain>.api.whispchat.com/api/wsConnect?ticket=<ticket>`\n- Query parameter: `ticket` (from `GET /api/user/getTicket`, short-lived)\n- STOMP CONNECT header: `Authorization: Bearer <JWT>`\n\n## Subscribe (server → client events)\n\nDestination:\n\n```text\n/user/{userId}/queue/messages\n```\n\nPayloads are polymorphic by `type` and match the `ServerEvent` schema.\n\n## Send (client → server commands)\n\nDestination:\n\n```text\n/api/chat\n```\n\nPayloads are polymorphic by `type` and match the `ClientChatCommand` schema.\n\n## Event/Command reference\n\n- **Server → client:** `ServerEvent` (see Schemas)\n- **Client → server:** `ClientChatCommand` (see Schemas)",
+        "parameters": [
+          {
+            "name": "ticket",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Short-lived WebSocket ticket from `GET /api/user/getTicket`."
+          }
+        ],
+        "responses": {
+          "101": {
+            "description": "Switching Protocols (WebSocket upgrade)."
+          },
+          "400": {
+            "description": "Missing/invalid ticket or upgrade request."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
         }
       }
     }
