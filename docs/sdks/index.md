@@ -7,7 +7,11 @@ Whisp SDKs provide:
 
 ## Available SDKs
 
-::scalar-page-link{filepath="docs/sdks/js/index.md" title="JavaScript / TypeScript" description="Browser + Node.js SDK"}
+:::scalar-card{title="JavaScript / TypeScript" leftIcon="phosphor/regular/code"}
+Browser + Node.js SDK.
+
+[Open JS/TS SDK →](/sdks/js)
+:::
 
 ## Adding more SDKs later
 
@@ -16,9 +20,9 @@ Use one folder per SDK:
 `docs/sdks/<sdk>/`
 - `index.md` (overview)
 - `installation.md`
-- `quickstart-*.md`
+- `quickstart/*`
 - `authentication.md`
 - `errors.md`
 - `troubleshooting.md`
 
-Add a new `group` under `/sdks` in `scalar.config.json`.
+Then add a new `group` under `/sdks` in `scalar.config.json`.

@@ -27,6 +27,20 @@ const whisp = new WhispClient({
 
 ## Start here
 
-::scalar-page-link{filepath="docs/sdks/js/installation.md" title="Installation" description="Install for browser or Node.js"}
-::scalar-page-link{filepath="docs/sdks/js/quickstart-browser.md" title="Quickstart (Browser)" description="Recommended production flow"}
-::scalar-page-link{filepath="docs/sdks/js/realtime.md" title="Realtime" description="Connect, events, and actions"}
+:::scalar-card{title="Installation" leftIcon="phosphor/regular/download-simple"}
+Install the SDK for browser or Node.js.
+
+[Go to Installation →](/sdks/js/installation)
+:::
+
+:::scalar-card{title="Quickstart (Browser)" leftIcon="phosphor/regular/rocket-launch"}
+Recommended production flow for web apps.
+
+[Go to Browser Quickstart →](/sdks/js/quickstart/browser)
+:::
+
+:::scalar-card{title="Realtime" leftIcon="phosphor/regular/wifi-high"}
+Connect, subscribe to events, and send actions.
+
+[Go to Realtime →](/sdks/js/realtime)
+:::

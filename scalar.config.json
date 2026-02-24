@@ -5,25 +5,57 @@
     "title": "Whisp Developer Documentation",
     "description": "SDKs, guides, and REST API reference for integrating Whisp into your apps."
   },
-
+  "assetsDir": "docs/assets",
   "siteConfig": {
-    "subdomain": "whisp", 
+    "subdomain": "whisp",
     "theme": "default",
-    "logo": "https://whispchat.com/logo.svg",
+    "logo": "/whisp-logo.svg",
     "head": {
       "title": "Whisp Docs",
       "meta": [
-        { "name": "description", "content": "Whisp SDK and API documentation." }
+        {
+          "name": "description",
+          "content": "Whisp SDK and API documentation."
+        }
+      ],
+      "links": [
+        {
+          "rel": "icon",
+          "href": "/whisp-logo.svg"
+        }
+      ]
+    },
+    "routing": {
+      "redirects": [
+        {
+          "from": "/sdks",
+          "to": "/sdks/overview"
+        },
+        {
+          "from": "/sdks/js",
+          "to": "/sdks/js/overview"
+        }
       ]
     }
   },
-
   "publishOnMerge": true,
   "publishPreviews": true,
   "pullRequestComments": true,
-
   "navigation": {
     "header": [
+      {
+        "type": "link",
+        "title": "Docs",
+        "to": "/",
+        "style": "link"
+      },
+      {
+        "type": "link",
+        "title": "API",
+        "to": "/api",
+        "style": "button",
+        "icon": "phosphor/regular/brackets-angle"
+      },
       {
         "type": "link",
         "title": "Status",
@@ -33,7 +65,7 @@
       {
         "type": "link",
         "title": "GitHub",
-        "to": "https://github.com/<your-org>/<your-sdk-repo>",
+        "to": "https://github.com/whispchat-com",
         "newTab": true
       }
     ],
@@ -48,64 +80,80 @@
         "title": "Getting Started",
         "filepath": "docs/getting-started.md"
       },
-
       "/sdks": {
         "type": "group",
         "title": "SDKs",
         "mode": "nested",
+        "icon": "phosphor/regular/package",
         "children": {
-          "/sdks": {
+          "overview": {
             "type": "page",
             "title": "SDK Overview",
             "filepath": "docs/sdks/index.md"
           },
-
-          "/sdks/js": {
+          "js": {
             "type": "group",
             "title": "JavaScript / TypeScript",
             "mode": "flat",
             "children": {
-              "/sdks/js": {
+              "overview": {
                 "type": "page",
                 "title": "Overview",
                 "filepath": "docs/sdks/js/index.md"
               },
-              "/sdks/js/installation": {
+              "installation": {
                 "type": "page",
                 "title": "Installation",
                 "filepath": "docs/sdks/js/installation.md"
               },
-              "/sdks/js/quickstart/browser": {
-                "type": "page",
-                "title": "Quickstart (Browser)",
-                "filepath": "docs/sdks/js/quickstart-browser.md"
+              "quickstart": {
+                "type": "group",
+                "title": "Quickstart",
+                "mode": "flat",
+                "children": {
+                  "browser": {
+                    "type": "page",
+                    "title": "Browser",
+                    "filepath": "docs/sdks/js/quickstart-browser.md"
+                  },
+                  "node": {
+                    "type": "page",
+                    "title": "Node.js",
+                    "filepath": "docs/sdks/js/quickstart-node.md"
+                  }
+                }
               },
-              "/sdks/js/quickstart/node": {
-                "type": "page",
-                "title": "Quickstart (Node.js)",
-                "filepath": "docs/sdks/js/quickstart-node.md"
-              },
-              "/sdks/js/auth": {
+              "authentication": {
                 "type": "page",
                 "title": "Authentication",
                 "filepath": "docs/sdks/js/authentication.md"
               },
-              "/sdks/js/realtime": {
+              "chats": {
+                "type": "page",
+                "title": "Chats",
+                "filepath": "docs/sdks/js/chats.md"
+              },
+              "messages": {
+                "type": "page",
+                "title": "Messages",
+                "filepath": "docs/sdks/js/messages.md"
+              },
+              "realtime": {
                 "type": "page",
                 "title": "Realtime",
                 "filepath": "docs/sdks/js/realtime.md"
               },
-              "/sdks/js/events": {
+              "events": {
                 "type": "page",
                 "title": "Event Types",
                 "filepath": "docs/sdks/js/events.md"
               },
-              "/sdks/js/errors": {
+              "errors": {
                 "type": "page",
                 "title": "Errors & Retries",
                 "filepath": "docs/sdks/js/errors.md"
               },
-              "/sdks/js/troubleshooting": {
+              "troubleshooting": {
                 "type": "page",
                 "title": "Troubleshooting",
                 "filepath": "docs/sdks/js/troubleshooting.md"
@@ -114,7 +162,6 @@
           }
         }
       },
-
       "/api": {
         "type": "openapi",
         "title": "REST API Reference",
