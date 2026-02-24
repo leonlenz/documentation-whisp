@@ -1,6 +1,7 @@
 # SDKs
 
 Whisp SDKs provide:
+
 - typed request/response models
 - auth state helpers (JWT + refresh token)
 - realtime lifecycle management (where applicable)
@@ -18,6 +19,8 @@ Browser + Node.js SDK.
 Use one folder per SDK:
 
 `docs/sdks/<sdk>/`
+
+Minimum recommended pages:
 - `index.md` (overview)
 - `installation.md`
 - `quickstart/*`
@@ -25,4 +28,4 @@ Use one folder per SDK:
 - `errors.md`
 - `troubleshooting.md`
 
-Then add a new `group` under `/sdks` in `scalar.config.json`.
+Then add the SDK under `/sdks` in `scalar.config.json` using a new `group` route.

@@ -1,6 +1,6 @@
 # Installation
 
-## Install the SDK
+## Install
 
 ```bash
 npm install whisp-sdk
@@ -8,24 +8,18 @@ npm install whisp-sdk
 
 ## Node.js realtime support
 
-If you use realtime WebSocket features in Node.js, also install `ws`:
+If you use realtime WebSocket features in Node.js, install `ws`:
 
 ```bash
 npm install ws
 ```
 
 :::scalar-callout{type="info"}
-In browsers, the SDK uses the native `WebSocket` automatically.
+In browsers, the SDK uses the native WebSocket stack (internally) and you typically don’t need extra dependencies.
 :::
 
-## TypeScript support
+## Configuration checklist
 
-The SDK is written in TypeScript and ships with full type declarations.
-
-```ts
-import { WhispClient, SendMsgEvent } from "whisp-sdk";
-
-whisp.realtime.on("message", (event: SendMsgEvent) => {
-  console.log(event.messageId, event.message, event.senderId);
-});
-```
+- `baseUrl`: `https://<clientDomain>.api.whispchat.com`
+- `apiKey`: **backend only**
+- `webSocketImpl`: Node.js only (e.g. `ws`)

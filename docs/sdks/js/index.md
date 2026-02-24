@@ -2,12 +2,27 @@
 
 Package: `whisp-sdk`
 
-## What this SDK covers
+:::scalar-callout{type="warning"}
+`apiKey` must not be shipped to browsers/mobile clients. Server-only endpoints require an API key (`x-api-key`) and must run in a trusted backend.
+:::
 
-- REST API wrapper
-- Auth state management (`setAuth`, `getAuth`, `logout`, `refresh`)
-- Automatic JWT refresh on `401`
-- Realtime WebSocket messaging with reconnect + backoff
+## What you get
+
+- REST API wrapper (same request/response models as the REST API)
+- auth state management (`setAuth`, `getAuth`, `logout`, `refresh`)
+- realtime (STOMP over WebSocket) wrapped behind `whisp.realtime.*`
+
+## Quick links
+
+- [Installation](/sdks/js/installation)
+- [Quickstart (Browser)](/sdks/js/quickstart/browser)
+- [Quickstart (Node.js)](/sdks/js/quickstart/node)
+- [Authentication (function-by-function)](/sdks/js/authentication)
+- [Chats (function-by-function)](/sdks/js/chats)
+- [Messages (function-by-function)](/sdks/js/messages)
+- [Realtime (function-by-function)](/sdks/js/realtime)
+- [Event Types & payloads](/sdks/js/events)
+- [Errors & retries](/sdks/js/errors)
 
 ## Constructor
 
@@ -15,32 +30,19 @@ Package: `whisp-sdk`
 import { WhispClient } from "whisp-sdk";
 
 const whisp = new WhispClient({
-  baseUrl: "https://yourapp.api.whispchat.com",
-  apiKey: "your-api-key",          // server-side only
-  webSocketImpl: undefined,        // Node.js only (e.g. `ws`)
+  baseUrl: "https://demo.api.whispchat.com",
+  apiKey: process.env.WHISP_API_KEY, // server-only
 });
 ```
 
-:::scalar-callout{type="warning"}
-`apiKey` must not be shipped to browsers/mobile clients.
-:::
+In Node.js realtime scenarios, also pass a WebSocket implementation (e.g. `ws`):
 
-## Start here
+```ts
+import WebSocket from "ws";
 
-:::scalar-card{title="Installation" leftIcon="phosphor/regular/download-simple"}
-Install the SDK for browser or Node.js.
-
-[Go to Installation →](/sdks/js/installation)
-:::
-
-:::scalar-card{title="Quickstart (Browser)" leftIcon="phosphor/regular/rocket-launch"}
-Recommended production flow for web apps.
-
-[Go to Browser Quickstart →](/sdks/js/quickstart/browser)
-:::
-
-:::scalar-card{title="Realtime" leftIcon="phosphor/regular/wifi-high"}
-Connect, subscribe to events, and send actions.
-
-[Go to Realtime →](/sdks/js/realtime)
-:::
+const whisp = new WhispClient({
+  baseUrl: "https://demo.api.whispchat.com",
+  apiKey: process.env.WHISP_API_KEY,
+  webSocketImpl: WebSocket,
+});
+```

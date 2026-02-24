@@ -3,67 +3,75 @@
 This is the recommended production flow for web apps.
 
 :::scalar-callout{type="warning"}
-Do **not** call `signIn` or `registerUser` from browser code. Those require an API key.
+Do **not** call `signIn` or `registerUser` from browser code. Those require an API key (`x-api-key`).
 :::
 
 ## Flow
 
-1. Your backend calls Whisp `signIn` using the API key
-2. Backend returns `{ jwt, refreshToken, userId }` to the browser
+1. Your backend signs the user in (`POST /api/user/signin`) using `x-api-key`
+2. Backend returns `{jwt, refreshToken, userId}` to the browser
 3. Browser initializes the SDK via `setAuth()`
 
-## Example: browser app
+## Browser code
 
 ```ts
 import { WhispClient } from "whisp-sdk";
 
 const whisp = new WhispClient({
-  baseUrl: "https://yourapp.api.whispchat.com",
+  baseUrl: "https://demo.api.whispchat.com",
 });
 
-// After your backend authenticates and returns tokens:
 whisp.setAuth({
-  jwt: "eyJhbG...",
-  refreshToken: "dGhpcyBpcyBh...",
+  jwt: "eyJhbGciOiJIUzI1NiJ9...",
+  refreshToken: "dGhpcyBpcyBhIHJlZnJlc2ggdG9rZW4...",
   userId: "550e8400-e29b-41d4-a716-446655440000",
 });
 
-const { chats } = await whisp.getChats(0, 20);
-console.log(chats);
-
-await whisp.realtime.connect();
+const chats = await whisp.getChats(0, 20);
+console.log(chats.chats);
 ```
 
-## Example: backend token exchange (Node/Express)
+## Backend example (Node/Express)
+
+The sign-in endpoint returns the JWT in the **`Authorization` response header** and the refresh token in the **JSON body**.
 
 ```ts
 import express from "express";
-import { WhispClient } from "whisp-sdk";
+import fetch from "node-fetch";
 
 const app = express();
 app.use(express.json());
 
-const whisp = new WhispClient({
-  baseUrl: "https://yourapp.api.whispchat.com",
-  apiKey: process.env.WHISP_API_KEY!,
-});
-
 app.post("/auth/whisp/sign-in", async (req, res) => {
   const { username, password } = req.body;
 
-  const user = await whisp.signIn({ username, password });
+  const r = await fetch("https://demo.api.whispchat.com/api/user/signin", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-api-key": process.env.WHISP_API_KEY!,
+    },
+    body: JSON.stringify({ username, password }),
+  });
 
-  // Return only what the browser needs:
-  const auth = whisp.getAuth();
-  return res.json({ user, ...auth });
+  if (!r.ok) {
+    return res.status(r.status).json(await r.json().catch(() => ({})));
+  }
+
+  const body = await r.json(); // SignInResponse (contains refreshToken, roles, etc.)
+  const authHeader = r.headers.get("authorization"); // "Bearer <JWT>"
+  const jwt = authHeader?.startsWith("Bearer ") ? authHeader.slice("Bearer ".length) : authHeader;
+
+  return res.json({
+    userId: body.id,
+    refreshToken: body.refreshToken,
+    jwt,
+  });
 });
 ```
 
-:::scalar-callout{type="info"}
-Prefer storing tokens in secure, httpOnly cookies via your backend when possible.
-:::
-
 ## Next
 
-::scalar-page-link{filepath="docs/sdks/js/authentication.md" title="Authentication" description="Token refresh and auth state"}
-::scalar-page-link{filepath="docs/sdks/js/realtime.md" title="Realtime" description="Events and actions"}
+- [Authentication](/sdks/js/authentication)
+- [Chats](/sdks/js/chats)
+- [Realtime](/sdks/js/realtime)

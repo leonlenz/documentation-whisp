@@ -1,26 +1,155 @@
 # Messages
 
-Whisp message history uses **cursor-based pagination**.
-
-## Read messages
-
-```ts
-// Get messages (defaults: limit=50, from latest)
-const { messages } = await whisp.getMessages(chatId);
-
-// Load older messages
-const { messages: older } = await whisp.getMessages(chatId, 50, lastMessageId);
-```
-
-## Efficient “last N messages” pattern
-
-For typical chat UIs:
-
-1. Load the newest page: `getMessages(chatId, 50)`
-2. When the user scrolls up, request older messages using `lastMessageId`
+This page documents message-related SDK functions **individually**, including parameters and return objects.
 
 :::scalar-callout{type="info"}
-For realtime delivery (new messages, typing, reactions), use the Realtime API.
+The REST `getMessages` endpoint automatically triggers a read receipt on the last message.
 :::
 
-::scalar-page-link{filepath="docs/sdks/js/realtime.md" title="Realtime" description="Connect, subscribe to events, send actions."}
+---
+
+## `getMessages(chatId, size?, lastMessageId?)`
+
+Fetch message history for a chat using cursor-based pagination.
+
+**REST mapping:** `GET /api/messages/getMessages/<chatId>?size=<size>&lastMessage=<cursor>`
+
+```ts
+const result = await whisp.getMessages(chatId);
+const older = await whisp.getMessages(chatId, 50, cursor);
+```
+
+**Parameters**
+- `chatId: string` (uuid)
+- `size?: number` (default `50`)
+- `lastMessageId?: string` (uuid) — cursor for older messages
+
+**Returns**
+
+### MessagesResponse
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `messages` | array<object> | optional |  |
+
+**Example**
+
+```json
+{
+  "messages": [
+    {
+      "chatId": "550e8400-e29b-41d4-a716-446655440000",
+      "timeStamp": "2024-01-15T10:30:00Z",
+      "messageId": "550e8400-e29b-41d4-a716-446655440000",
+      "senderId": "550e8400-e29b-41d4-a716-446655440000",
+      "content": "string",
+      "edited": false,
+      "editedAt": "2024-01-15T10:30:00Z",
+      "replyTo": {
+        "chatId": "550e8400-e29b-41d4-a716-446655440000",
+        "timeStamp": "2024-01-15T10:30:00Z",
+        "messageId": "550e8400-e29b-41d4-a716-446655440000",
+        "senderId": "550e8400-e29b-41d4-a716-446655440000",
+        "content": "string",
+        "edited": false,
+        "editedAt": "2024-01-15T10:30:00Z"
+      },
+      "reactions": [
+        {
+          "reactionId": "550e8400-e29b-41d4-a716-446655440000",
+          "chatId": "550e8400-e29b-41d4-a716-446655440000",
+          "messageId": "550e8400-e29b-41d4-a716-446655440000",
+          "senderId": "550e8400-e29b-41d4-a716-446655440000",
+          "reaction": "string",
+          "createdAt": "2024-01-15T10:30:00Z"
+        }
+      ]
+    }
+  ]
+}
+```
+
+
+---
+
+## Pagination pattern (“load older on scroll”)
+
+1. Initial load: `getMessages(chatId, 50)`
+2. Keep the oldest message’s `messageId` as `cursor`
+3. When the user scrolls up: `getMessages(chatId, 50, cursor)`
+
+---
+
+## Data models used on this page
+
+### Message
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `chatId` | string (uuid) | optional |  |
+| `timeStamp` | string (date-time) | optional |  |
+| `messageId` | string (uuid) | optional |  |
+| `senderId` | string (uuid) | optional |  |
+| `content` | string | optional |  |
+| `edited` | boolean | optional |  |
+| `editedAt` | string (date-time) | null | optional |  |
+| `replyTo` | object | optional |  |
+| `reactions` | array<object> | optional |  |
+
+**Example**
+
+```json
+{
+  "chatId": "550e8400-e29b-41d4-a716-446655440000",
+  "timeStamp": "2024-01-15T10:30:00Z",
+  "messageId": "550e8400-e29b-41d4-a716-446655440000",
+  "senderId": "550e8400-e29b-41d4-a716-446655440000",
+  "content": "string",
+  "edited": false,
+  "editedAt": "2024-01-15T10:30:00Z",
+  "replyTo": {
+    "chatId": "550e8400-e29b-41d4-a716-446655440000",
+    "timeStamp": "2024-01-15T10:30:00Z",
+    "messageId": "550e8400-e29b-41d4-a716-446655440000",
+    "senderId": "550e8400-e29b-41d4-a716-446655440000",
+    "content": "string",
+    "edited": false,
+    "editedAt": "2024-01-15T10:30:00Z"
+  },
+  "reactions": [
+    {
+      "reactionId": "550e8400-e29b-41d4-a716-446655440000",
+      "chatId": "550e8400-e29b-41d4-a716-446655440000",
+      "messageId": "550e8400-e29b-41d4-a716-446655440000",
+      "senderId": "550e8400-e29b-41d4-a716-446655440000",
+      "reaction": "string",
+      "createdAt": "2024-01-15T10:30:00Z"
+    }
+  ]
+}
+```
+
+
+### Reaction
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `reactionId` | string (uuid) | optional |  |
+| `chatId` | string (uuid) | optional |  |
+| `messageId` | string (uuid) | optional |  |
+| `senderId` | string (uuid) | optional |  |
+| `reaction` | string | optional |  |
+| `createdAt` | string (date-time) | optional |  |
+
+**Example**
+
+```json
+{
+  "reactionId": "550e8400-e29b-41d4-a716-446655440000",
+  "chatId": "550e8400-e29b-41d4-a716-446655440000",
+  "messageId": "550e8400-e29b-41d4-a716-446655440000",
+  "senderId": "550e8400-e29b-41d4-a716-446655440000",
+  "reaction": "string",
+  "createdAt": "2024-01-15T10:30:00Z"
+}
+```

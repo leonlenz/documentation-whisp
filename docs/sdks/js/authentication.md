@@ -1,51 +1,273 @@
 # Authentication
 
-## Auth state
+This page documents authentication-related SDK functions **individually**, including parameters and return objects.
+
+## Client-side vs server-side
+
+- **Server-side only:** `registerUser`, `signIn` (require `x-api-key`)
+- **Client-side:** all other methods use JWT auth (`Authorization: Bearer <JWT>`)
+
+---
+
+## `setAuth(auth)`
+
+Store auth tokens in the client.
+
+**Signature**
 
 ```ts
-// Set auth tokens (after your backend authenticates)
-whisp.setAuth({ jwt, refreshToken, userId });
-
-// Read current auth state
-const auth = whisp.getAuth(); // { jwt, refreshToken, userId } | null
-
-// Check if authenticated
-whisp.isAuthenticated; // boolean
+whisp.setAuth({
+  jwt: string;
+  refreshToken: string;
+  userId: string; // uuid
+});
 ```
 
-## Server-only endpoints
+**Notes**
+- `jwt` is the JWT without the `Bearer ` prefix.
+- `refreshToken` is the refresh token string.
+- `userId` is the authenticated user’s UUID.
 
-These require an API key and should be called from your backend:
+## `getAuth()`
 
-- `registerUser`
-- `signIn`
+Return the currently stored auth state (or `null`).
 
 ```ts
-// Sign in (requires API key — backend only)
-const user = await whisp.signIn({ username, password });
-
-// Register user (requires API key — backend only)
-await whisp.registerUser({ username, email, password, firstName?, surName? });
+const auth = whisp.getAuth();
 ```
 
-## Refresh + logout
+## `isAuthenticated`
 
 ```ts
-// Refresh JWT manually (normally happens automatically on 401)
-const success = await whisp.refresh();
-
-// Logout (invalidates refresh token)
-await whisp.logout();
-
-// Logout all sessions for the user
-await whisp.logoutAll();
+if (!whisp.isAuthenticated) {
+  // prompt login
+}
 ```
 
-## Automatic token refresh
+---
 
-The SDK automatically refreshes the JWT when any request returns a `401`. This is transparent.  
-If the refresh token itself is expired, the SDK clears auth state and throws a `WhispError` with status `401`.
+## `registerUser(request)` (server-only)
+
+Registers a new user account.
+
+**REST mapping:** `POST /api/user/registerUser`
+
+**Signature**
+
+```ts
+await whisp.registerUser({
+  username: string;
+  email: string;
+  password: string;
+  firstName?: string;
+  surName?: string;
+});
+```
+
+**Parameters**
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `username` | string | required |  |
+| `firstName` | string | optional | Optional |
+| `surName` | string | optional | Optional |
+| `email` | string (email) | required |  |
+| `password` | string (password) | required |  |
+
+**Returns**
+- `void` (HTTP `201` on success)
+
+---
+
+## `signIn(request)` (server-only)
+
+Authenticates a user. The server returns:
+- JWT in **`Authorization` response header** (`Bearer <JWT>`)
+- refresh token in response body
+
+**REST mapping:** `POST /api/user/signin`
+
+**Signature**
+
+```ts
+const user = await whisp.signIn({
+  username: string;
+  password: string;
+});
+```
+
+**Parameters**
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `username` | string | required |  |
+| `password` | string (password) | required |  |
+
+**Returns**
+
+### SignInResponse
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `id` | string (uuid) | optional |  |
+| `username` | string | optional |  |
+| `email` | string (email) | optional |  |
+| `refreshToken` | string | optional |  |
+| `roles` | array<string> | optional |  |
+
+**Example**
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "username": "johndoe",
+  "email": "john.doe@example.com",
+  "refreshToken": "dGhpcyBpcyBhIHJlZnJlc2ggdG9rZW4...",
+  "roles": [
+    "USER"
+  ]
+}
+```
+
+
+**JWT header example**
+
+```http
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9...
+```
+
+---
+
+## `refresh()` (client-side)
+
+Refresh an expired JWT using the refresh token.
+
+**REST mapping:** `POST /api/auth/refresh`
+
+**What the API expects**
+- `Authorization: Bearer <refreshToken>` header
+- body: `{ "expiredJwt": "<expired_jwt>" }`
+
+**Returns**
+- `boolean` — `true` if refresh succeeded; otherwise throws `WhispError` (typically `401`).
+
+---
+
+## `logout()` (client-side)
+
+Invalidates the current refresh token.
+
+**REST mapping:** `POST /api/auth/logout`
+
+**Returns:** `void`
+
+---
+
+## `logoutAll()` (client-side)
+
+Invalidates **all** refresh tokens for the authenticated user.
+
+**REST mapping:** `POST /api/auth/logoutAll`
+
+**Returns:** `void`
+
+---
+
+## `getUser()` (client-side)
+
+Fetch the authenticated user’s profile.
+
+**REST mapping:** `GET /api/user/getUser`
+
+```ts
+const me = await whisp.getUser();
+```
+
+**Returns**
+
+### UserInfo
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `id` | string (uuid) | optional |  |
+| `username` | string | optional |  |
+| `email` | string (email) | optional |  |
+| `role` | array<string> | optional |  |
+
+**Example**
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "username": "string",
+  "email": "user@example.com",
+  "role": [
+    "USER"
+  ]
+}
+```
+
+
+---
+
+## `changeUsername(newUsername)` (client-side)
+
+Change the authenticated user’s username. The API returns a **new JWT** in the `Authorization` response header.
+
+**REST mapping:** `POST /api/user/changeUsername`
+
+```ts
+await whisp.changeUsername("johndoe_updated");
+```
+
+**Parameters**
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `newUsername` | string | required |  |
+
+**Returns**
+- `void` (SDK updates stored JWT if it reads the header)
+
+---
+
+## `deleteUser()` (client-side)
+
+Delete the authenticated user, including all their data/messages.
+
+**REST mapping:** `DELETE /api/user/deleteUser`
+
+**Returns:** `void`
+
+---
+
+## `getTicket()` (client-side)
+
+Get a short-lived ticket required to open a WebSocket connection.
+
+**REST mapping:** `GET /api/user/getTicket`
+
+```ts
+const { ticket } = await whisp.getTicket();
+```
+
+**Returns**
+
+### TicketResponse
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `ticket` | string | optional | Short-lived ticket (~20 seconds) |
+
+**Example**
+
+```json
+{
+  "ticket": "c2f9c3a0-...-ticket-string"
+}
+```
+
 
 :::scalar-callout{type="warning"}
-Treat a failed refresh as “session expired” and re-authenticate.
+Tickets are valid for ~20 seconds. Fetch a ticket immediately before connecting (and for every reconnect).
 :::

@@ -1,16 +1,29 @@
 # Troubleshooting
 
-## Realtime does not connect (Node.js)
+## Realtime fails to connect
 
-- Ensure you installed `ws`
-- Ensure you passed `webSocketImpl: WebSocket` to the client
+**Checklist**
+1. Fetch a ticket immediately before connecting (`getTicket`)
+2. Connect to: `https://<clientDomain>.api.whispchat.com/api/wsConnect?ticket=<ticket>`
+3. Pass JWT as a **STOMP** header (`Authorization: Bearer <JWT>`) — not an HTTP header
 
 ## “401” loops
 
-- Your refresh token is expired/revoked.
-- Clear auth state and re-authenticate via your backend, then call `setAuth()` again.
+- Refresh token expired or revoked → clear auth state and re-authenticate.
 
-## Missing events
+## Missing messages after reconnect
 
-- Confirm you did not unsubscribe your handlers
-- Confirm you’re connected: `whisp.realtime.connected === true`
+The realtime protocol does not guarantee re-delivery of all missed events across reconnects. After reconnect, backfill by calling:
+
+- `getMessages(chatId, size, lastMessageId?)`
+
+## Reaction deletion confusion
+
+In realtime events:
+- `REACT.messageId` is the **reaction ID** (used to delete)
+- In REST history:
+  - reaction id lives at `reactions[].reactionId`
+
+## Multiple devices
+
+A user may hold multiple simultaneous connections (e.g. phone + desktop). Design your UI to tolerate multiple connections and duplicate device presence.

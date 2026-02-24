@@ -1,26 +1,61 @@
 # Errors & Retries
 
-## HTTP errors
+The SDK throws a `WhispError` for HTTP-level errors and surfaces WebSocket errors through the `error` event.
 
-The SDK throws `WhispError` for HTTP errors:
+## REST error bodies
 
-```ts
-import { WhispError } from "whisp-sdk";
+### Unauthorized (expired/invalid JWT)
 
-try {
-  await whisp.createChat("Test", ["nonexistent_user"]);
-} catch (err) {
-  if (err instanceof WhispError) {
-    console.log(err.status);  // HTTP status code
-    console.log(err.message); // Error message
-    console.log(err.body);    // Raw error response body
-  }
+### AuthErrorResponse
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `type` | string | optional |  |
+| `title` | string | optional |  |
+| `status` | string | optional |  |
+| `detail` | string | optional |  |
+| `instance` | string | optional |  |
+| `code` | string | optional |  |
+
+**Example**
+
+```json
+{
+  "type": "https://httpstatuses.com/401",
+  "title": "Unauthorized",
+  "status": "401",
+  "detail": "Invalid or expired JWT.",
+  "instance": "/api/chat/getChats",
+  "code": "AUTH_INVALID_TOKEN"
 }
 ```
 
-## Recommended handling
 
-- `401`: treat as “unauthenticated”. If refresh fails, force re-login.
-- `403`: permissions/role issue (don’t retry blindly).
-- `429`: back off and retry later.
-- `5xx`: retry with exponential backoff + jitter.
+### Validation / bad request
+
+### ErrorMessage
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `message` | string | optional |  |
+
+**Example**
+
+```json
+{
+  "message": "Invalid request - validation failed."
+}
+```
+
+
+## Recommended retry strategy
+
+- `401`: if refresh fails → treat as “session expired” and re-authenticate
+- `403`: permissions issue — don’t retry blindly
+- `429`: back off and retry later
+- `5xx`: retry with exponential backoff + jitter
+
+## WebSocket errors
+
+- Ticket expired (connect too late) → fetch a new ticket and reconnect
+- Wrong JWT placement (sent as HTTP header instead of STOMP header) → connect will fail
