@@ -5,11 +5,10 @@
     "title": "Whisp Developer Documentation",
     "description": "SDKs, guides, and REST API reference for integrating Whisp into your apps."
   },
-  "assetsDir": "docs/assets",
   "siteConfig": {
     "subdomain": "whisp",
     "theme": "default",
-    "logo": "/whisp-logo.svg",
+    "logo": "docs/assets/whisp-logo.svg",
     "head": {
       "title": "Whisp Docs",
       "meta": [
@@ -106,22 +105,15 @@
                 "title": "Installation",
                 "filepath": "docs/sdks/js/installation.md"
               },
-              "quickstart": {
-                "type": "group",
-                "title": "Quickstart",
-                "mode": "flat",
-                "children": {
-                  "browser": {
-                    "type": "page",
-                    "title": "Browser",
-                    "filepath": "docs/sdks/js/quickstart-browser.md"
-                  },
-                  "node": {
-                    "type": "page",
-                    "title": "Node.js",
-                    "filepath": "docs/sdks/js/quickstart-node.md"
-                  }
-                }
+              "quickstart-browser": {
+                "type": "page",
+                "title": "Quickstart (Browser)",
+                "filepath": "docs/sdks/js/quickstart-browser.md"
+              },
+              "quickstart-node": {
+                "type": "page",
+                "title": "Quickstart (Node.js)",
+                "filepath": "docs/sdks/js/quickstart-node.md"
               },
               "authentication": {
                 "type": "page",
@@ -169,5 +161,6 @@
         "icon": "phosphor/regular/brackets-angle"
       }
     }
-  }
+  },
+  "assetsDir": "docs/assets"
 }
