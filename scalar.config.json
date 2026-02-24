@@ -118,7 +118,7 @@
       "/api": {
         "type": "openapi",
         "title": "REST API Reference",
-        "filepath": "docs/api-reference/openapi.yaml",
+        "filepath": "docs/api-reference/openapi.json",
         "icon": "phosphor/regular/brackets-angle"
       }
     }
