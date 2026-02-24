@@ -1,0 +1,126 @@
+{
+  "$schema": "https://cdn.scalar.com/schema/scalar-config-next.json",
+  "scalar": "2.0.0",
+  "info": {
+    "title": "Whisp Developer Documentation",
+    "description": "SDKs, guides, and REST API reference for integrating Whisp into your apps."
+  },
+
+  "siteConfig": {
+    "subdomain": "whisp", 
+    "theme": "default",
+    "logo": "https://whispchat.com/logo.svg",
+    "head": {
+      "title": "Whisp Docs",
+      "meta": [
+        { "name": "description", "content": "Whisp SDK and API documentation." }
+      ]
+    }
+  },
+
+  "publishOnMerge": true,
+  "publishPreviews": true,
+  "pullRequestComments": true,
+
+  "navigation": {
+    "header": [
+      {
+        "type": "link",
+        "title": "Status",
+        "to": "https://status.whispchat.com",
+        "newTab": true
+      },
+      {
+        "type": "link",
+        "title": "GitHub",
+        "to": "https://github.com/<your-org>/<your-sdk-repo>",
+        "newTab": true
+      }
+    ],
+    "routes": {
+      "/": {
+        "type": "page",
+        "title": "Overview",
+        "filepath": "docs/index.md"
+      },
+      "/getting-started": {
+        "type": "page",
+        "title": "Getting Started",
+        "filepath": "docs/getting-started.md"
+      },
+
+      "/sdks": {
+        "type": "group",
+        "title": "SDKs",
+        "mode": "nested",
+        "children": {
+          "/sdks": {
+            "type": "page",
+            "title": "SDK Overview",
+            "filepath": "docs/sdks/index.md"
+          },
+
+          "/sdks/js": {
+            "type": "group",
+            "title": "JavaScript / TypeScript",
+            "mode": "flat",
+            "children": {
+              "/sdks/js": {
+                "type": "page",
+                "title": "Overview",
+                "filepath": "docs/sdks/js/index.md"
+              },
+              "/sdks/js/installation": {
+                "type": "page",
+                "title": "Installation",
+                "filepath": "docs/sdks/js/installation.md"
+              },
+              "/sdks/js/quickstart/browser": {
+                "type": "page",
+                "title": "Quickstart (Browser)",
+                "filepath": "docs/sdks/js/quickstart-browser.md"
+              },
+              "/sdks/js/quickstart/node": {
+                "type": "page",
+                "title": "Quickstart (Node.js)",
+                "filepath": "docs/sdks/js/quickstart-node.md"
+              },
+              "/sdks/js/auth": {
+                "type": "page",
+                "title": "Authentication",
+                "filepath": "docs/sdks/js/authentication.md"
+              },
+              "/sdks/js/realtime": {
+                "type": "page",
+                "title": "Realtime",
+                "filepath": "docs/sdks/js/realtime.md"
+              },
+              "/sdks/js/events": {
+                "type": "page",
+                "title": "Event Types",
+                "filepath": "docs/sdks/js/events.md"
+              },
+              "/sdks/js/errors": {
+                "type": "page",
+                "title": "Errors & Retries",
+                "filepath": "docs/sdks/js/errors.md"
+              },
+              "/sdks/js/troubleshooting": {
+                "type": "page",
+                "title": "Troubleshooting",
+                "filepath": "docs/sdks/js/troubleshooting.md"
+              }
+            }
+          }
+        }
+      },
+
+      "/api": {
+        "type": "openapi",
+        "title": "REST API Reference",
+        "filepath": "docs/api-reference/openapi.yaml",
+        "icon": "phosphor/regular/brackets-angle"
+      }
+    }
+  }
+}
