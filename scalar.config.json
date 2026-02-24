@@ -47,7 +47,7 @@
         "type": "link",
         "title": "Docs",
         "to": "/",
-        "style": "link"
+        "style": "button"
       },
       {
         "type": "link",
