@@ -14,18 +14,3 @@ Browser + Node.js SDK.
 [Open JS/TS SDK →](/sdks/js)
 :::
 
-## Adding more SDKs later
-
-Use one folder per SDK:
-
-`docs/sdks/<sdk>/`
-
-Minimum recommended pages:
-- `index.md` (overview)
-- `installation.md`
-- `quickstart/*`
-- `authentication.md`
-- `errors.md`
-- `troubleshooting.md`
-
-Then add the SDK under `/sdks` in `scalar.config.json` using a new `group` route.

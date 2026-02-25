@@ -8,7 +8,7 @@ import WebSocket from "ws";
 
 const whisp = new WhispClient({
   baseUrl: "https://demo.api.whispchat.com",
-  apiKey: process.env.WHISP_API_KEY!,
+  apiKey: WHISP_API_KEY,
   webSocketImpl: WebSocket,
 });
 

@@ -70,7 +70,16 @@ console.log(result.chats);
 
 | Field | Type | Required | Notes |
 |---|---|---|---|
-| `chats` | array<object> | optional |  |
+| `chats` | array[ChatUserInfo] | optional |  |
+
+### ChatUserInfo
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `userId` | string (uuid) | optional |  |
+| `username` | string | optional |  |
+| `joinedChatAt` | string (date-time) | optional |  |
+| `lastSeenMessage` | string (uuid) | optional |  |
 
 **Example**
 
@@ -112,7 +121,16 @@ const { users } = await whisp.getChatUsers(chatId);
 
 | Field | Type | Required | Notes |
 |---|---|---|---|
-| `users` | array<object> | optional |  |
+| `users` | array[ChatUserInfo] | optional |  |
+
+### ChatUserInfo
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `userId` | string (uuid) | optional |  |
+| `username` | string | optional |  |
+| `joinedChatAt` | string (date-time) | optional |  |
+| `lastSeenMessage` | string (uuid) | optional |  |
 
 **Example**
 
@@ -240,23 +258,3 @@ await whisp.deleteChat(chatId);
 }
 ```
 
-
-### ChatUserInfo
-
-| Field | Type | Required | Notes |
-|---|---|---|---|
-| `userId` | string (uuid) | optional |  |
-| `username` | string | optional |  |
-| `joinedChatAt` | string (date-time) | optional |  |
-| `lastSeenMessage` | string (uuid) | optional |  |
-
-**Example**
-
-```json
-{
-  "userId": "550e8400-e29b-41d4-a716-446655440000",
-  "username": "string",
-  "joinedChatAt": "2024-01-15T10:30:00Z",
-  "lastSeenMessage": "550e8400-e29b-41d4-a716-446655440000"
-}
-```

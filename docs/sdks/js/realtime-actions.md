@@ -18,23 +18,10 @@ Send a new message to a chat.
 
 | Field | Type | Required | Notes |
 |---|---|---|---|
-| `type` | string | required |  |
-| `senderId` | string (uuid) | required |  |
-| `message` | string | required |  |
-| `timeStamp` | string (date-time) | required |  |
-| `chatId` | string (uuid) | required |  |
+| `message` | string | required | The content of the message. |
+| `chatId` | string (uuid) | required | The ID of the Chat the message is being sent to. |
 
-**Example**
 
-```json
-{
-  "type": "SEND_MSG",
-  "senderId": "550e8400-e29b-41d4-a716-446655440000",
-  "message": "Hello, world!",
-  "timeStamp": "2024-01-15T10:30:00Z",
-  "chatId": "660e8400-e29b-41d4-a716-446655440001"
-}
-```
 
 ---
 
@@ -46,25 +33,11 @@ Edit an existing message.
 
 | Field | Type | Required | Notes |
 |---|---|---|---|
-| `type` | string | required |  |
-| `senderId` | string (uuid) | required |  |
-| `message` | string | required |  |
-| `messageId` | string (uuid) | required |  |
-| `chatId` | string (uuid) | required |  |
-| `timeStamp` | string (date-time) | required |  |
+| `message` | string | required | New edited message. |
+| `messageId` | string (uuid) | required | The ID of the message being edited. |
+| `chatId` | string (uuid) | required | The chat ID the message is in. |
 
-**Example**
 
-```json
-{
-  "type": "EDIT_MSG",
-  "senderId": "550e8400-e29b-41d4-a716-446655440000",
-  "message": "Hello, world! (edited)",
-  "messageId": "770e8400-e29b-41d4-a716-446655440002",
-  "chatId": "660e8400-e29b-41d4-a716-446655440001",
-  "timeStamp": "2024-01-15T10:35:00Z"
-}
-```
 
 ---
 
@@ -76,21 +49,10 @@ Delete a message.
 
 | Field | Type | Required | Notes |
 |---|---|---|---|
-| `type` | string | required |  |
-| `senderId` | string (uuid) | required |  |
-| `chatId` | string (uuid) | required |  |
-| `messageId` | string (uuid) | required |  |
+| `chatId` | string (uuid) | required | The chat ID the message is in. |
+| `messageId` | string (uuid) | required | The ID of the message to be deleted. |
 
-**Example**
 
-```json
-{
-  "type": "DELETE_MSG",
-  "senderId": "550e8400-e29b-41d4-a716-446655440000",
-  "chatId": "660e8400-e29b-41d4-a716-446655440001",
-  "messageId": "770e8400-e29b-41d4-a716-446655440002"
-}
-```
 
 ---
 
@@ -102,25 +64,11 @@ Reply to a specific message.
 
 | Field | Type | Required | Notes |
 |---|---|---|---|
-| `type` | string | required |  |
-| `senderId` | string (uuid) | required |  |
-| `chatId` | string (uuid) | required |  |
-| `messageId` | string (uuid) | required | ID of message being replied to |
-| `message` | string | required |  |
-| `timeStamp` | string (date-time) | required |  |
+| `chatId` | string (uuid) | required | The chat ID the message is in. |
+| `messageId` | string (uuid) | required | ID of message being replied to. |
+| `message` | string | required | The contents of the reply. |
 
-**Example**
 
-```json
-{
-  "type": "REPLY",
-  "senderId": "550e8400-e29b-41d4-a716-446655440000",
-  "chatId": "660e8400-e29b-41d4-a716-446655440001",
-  "messageId": "770e8400-e29b-41d4-a716-446655440002",
-  "message": "I agree with this!",
-  "timeStamp": "2024-01-15T10:33:00Z"
-}
-```
 
 ---
 
@@ -132,19 +80,9 @@ Notify other participants that the current user is typing.
 
 | Field | Type | Required | Notes |
 |---|---|---|---|
-| `type` | string | required |  |
-| `senderId` | string (uuid) | required |  |
-| `chatId` | string (uuid) | required |  |
+| `chatId` | string (uuid) | required | ID of the chat being typed in. |
 
-**Example**
 
-```json
-{
-  "type": "TYPING",
-  "senderId": "550e8400-e29b-41d4-a716-446655440000",
-  "chatId": "660e8400-e29b-41d4-a716-446655440001"
-}
-```
 
 ---
 
@@ -156,25 +94,11 @@ Add a reaction (emoji) to a message.
 
 | Field | Type | Required | Notes |
 |---|---|---|---|
-| `type` | string | required |  |
-| `senderId` | string (uuid) | required |  |
-| `chatId` | string (uuid) | required |  |
-| `messageId` | string (uuid) | required |  |
-| `reaction` | string | required |  |
-| `timeStamp` | string (date-time) | required |  |
+| `chatId` | string (uuid) | required | ID of the chat the message is in. |
+| `messageId` | string (uuid) | required | ID of the message being reacted to. |
+| `reaction` | string | required | The emoji reaction. |
 
-**Example**
 
-```json
-{
-  "type": "REACT",
-  "senderId": "550e8400-e29b-41d4-a716-446655440000",
-  "chatId": "660e8400-e29b-41d4-a716-446655440001",
-  "messageId": "770e8400-e29b-41d4-a716-446655440002",
-  "reaction": "\ud83d\udc4d",
-  "timeStamp": "2024-01-15T10:32:00Z"
-}
-```
 
 ---
 
@@ -186,19 +110,9 @@ Remove a reaction by its id.
 
 | Field | Type | Required | Notes |
 |---|---|---|---|
-| `type` | string | required |  |
-| `senderId` | string (uuid) | required |  |
-| `reactionId` | string (uuid) | required |  |
+| `reactionId` | string (uuid) | required | ID of the reaction to be deleted. |
 
-**Example**
 
-```json
-{
-  "type": "DELETE_REACT",
-  "senderId": "550e8400-e29b-41d4-a716-446655440000",
-  "reactionId": "880e8400-e29b-41d4-a716-446655440003"
-}
-```
 
 :::scalar-callout{type="info"}
 You can find `reactionId` on message history (`reactions[].reactionId`) or in the realtime `reaction` event (`messageId`).
@@ -208,24 +122,12 @@ You can find `reactionId` on message history (`reactions[].reactionId`) or in th
 
 ### `realtime.markAsRead(chatId, messageId)`
 
-Mark a message as read.
+Mark a message as read. This will also mark all messages before this as read.
 
 #### ReadMsgPayload
 
 | Field | Type | Required | Notes |
 |---|---|---|---|
-| `type` | string | required |  |
-| `senderId` | string (uuid) | required |  |
-| `chatId` | string (uuid) | required |  |
-| `messageId` | string (uuid) | required |  |
+| `chatId` | string (uuid) | required | The chat ID that the message is in. |
+| `messageId` | string (uuid) | required | ID of the message to be marked as read. |
 
-**Example**
-
-```json
-{
-  "type": "READ_MSG",
-  "senderId": "550e8400-e29b-41d4-a716-446655440000",
-  "chatId": "660e8400-e29b-41d4-a716-446655440001",
-  "messageId": "770e8400-e29b-41d4-a716-446655440002"
-}
-```

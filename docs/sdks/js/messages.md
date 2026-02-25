@@ -3,7 +3,7 @@
 This page documents message-related SDK functions **individually**, including parameters and return objects.
 
 :::scalar-callout{type="info"}
-The REST `getMessages` endpoint automatically triggers a read receipt on the last message.
+The `getMessages` function automatically triggers a read on the last message in that chat.
 :::
 
 ---
@@ -30,7 +30,32 @@ const older = await whisp.getMessages(chatId, 50, cursor);
 
 | Field | Type | Required | Notes |
 |---|---|---|---|
-| `messages` | array<object> | optional |  |
+| `messages` | array[Message] | optional |  |
+
+### Message
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `chatId` | string (uuid) | optional |  |
+| `timeStamp` | string (date-time) | optional |  |
+| `messageId` | string (uuid) | optional |  |
+| `senderId` | string (uuid) | optional |  |
+| `content` | string | optional |  |
+| `edited` | boolean | optional |  |
+| `editedAt` | string (date-time) | null | optional |  |
+| `replyTo` | object | optional |  |
+| `reactions` | array[Reaction] | optional |  |
+
+### Reaction
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `reactionId` | string (uuid) | optional |  |
+| `chatId` | string (uuid) | optional |  |
+| `messageId` | string (uuid) | optional |  |
+| `senderId` | string (uuid) | optional |  |
+| `reaction` | string | optional |  |
+| `createdAt` | string (date-time) | optional |  |
 
 **Example**
 
@@ -78,78 +103,4 @@ const older = await whisp.getMessages(chatId, 50, cursor);
 2. Keep the oldest message’s `messageId` as `cursor`
 3. When the user scrolls up: `getMessages(chatId, 50, cursor)`
 
----
 
-## Data models used on this page
-
-### Message
-
-| Field | Type | Required | Notes |
-|---|---|---|---|
-| `chatId` | string (uuid) | optional |  |
-| `timeStamp` | string (date-time) | optional |  |
-| `messageId` | string (uuid) | optional |  |
-| `senderId` | string (uuid) | optional |  |
-| `content` | string | optional |  |
-| `edited` | boolean | optional |  |
-| `editedAt` | string (date-time) | null | optional |  |
-| `replyTo` | object | optional |  |
-| `reactions` | array<object> | optional |  |
-
-**Example**
-
-```json
-{
-  "chatId": "550e8400-e29b-41d4-a716-446655440000",
-  "timeStamp": "2024-01-15T10:30:00Z",
-  "messageId": "550e8400-e29b-41d4-a716-446655440000",
-  "senderId": "550e8400-e29b-41d4-a716-446655440000",
-  "content": "string",
-  "edited": false,
-  "editedAt": "2024-01-15T10:30:00Z",
-  "replyTo": {
-    "chatId": "550e8400-e29b-41d4-a716-446655440000",
-    "timeStamp": "2024-01-15T10:30:00Z",
-    "messageId": "550e8400-e29b-41d4-a716-446655440000",
-    "senderId": "550e8400-e29b-41d4-a716-446655440000",
-    "content": "string",
-    "edited": false,
-    "editedAt": "2024-01-15T10:30:00Z"
-  },
-  "reactions": [
-    {
-      "reactionId": "550e8400-e29b-41d4-a716-446655440000",
-      "chatId": "550e8400-e29b-41d4-a716-446655440000",
-      "messageId": "550e8400-e29b-41d4-a716-446655440000",
-      "senderId": "550e8400-e29b-41d4-a716-446655440000",
-      "reaction": "string",
-      "createdAt": "2024-01-15T10:30:00Z"
-    }
-  ]
-}
-```
-
-
-### Reaction
-
-| Field | Type | Required | Notes |
-|---|---|---|---|
-| `reactionId` | string (uuid) | optional |  |
-| `chatId` | string (uuid) | optional |  |
-| `messageId` | string (uuid) | optional |  |
-| `senderId` | string (uuid) | optional |  |
-| `reaction` | string | optional |  |
-| `createdAt` | string (date-time) | optional |  |
-
-**Example**
-
-```json
-{
-  "reactionId": "550e8400-e29b-41d4-a716-446655440000",
-  "chatId": "550e8400-e29b-41d4-a716-446655440000",
-  "messageId": "550e8400-e29b-41d4-a716-446655440000",
-  "senderId": "550e8400-e29b-41d4-a716-446655440000",
-  "reaction": "string",
-  "createdAt": "2024-01-15T10:30:00Z"
-}
-```
