@@ -80,7 +80,7 @@ const unsubscribe = whisp.realtime.on("message", (event) => {
 | `chatId` | string (uuid) | Chat the message belongs to. |
 | `message` | string | Message text/content. |
 | `messageId` | string (uuid) | Unique message id. |
-| `recipientId` | string (uuid) | Recipient user id (for 1:1 chats). |
+| `recipientId` | string (uuid) | ID of current user. Can be ignored. |
 | `senderId` | string (uuid) | Sender user id. |
 
 **Example**
@@ -118,7 +118,7 @@ const unsubscribe = whisp.realtime.on("messageEdited", (event) => {
 | `chatId` | string (uuid) | Chat the message belongs to. |
 | `message` | string | Updated message content. |
 | `messageId` | string (uuid) | Edited message id. |
-| `recipientId` | string (uuid) | Recipient user id (for 1:1 chats). |
+| `recipientId` | string (uuid) | ID of current user. Can be ignored. |
 | `senderId` | string (uuid) | User who edited the message. |
 | `editedAt` | string (date-time) | When the edit happened. |
 
@@ -156,7 +156,7 @@ const unsubscribe = whisp.realtime.on("messageDeleted", (event) => {
 | `type` | string | Event type. Here it is `DELETE_MSG`. |
 | `chatId` | string (uuid) | Chat the deleted message belonged to. |
 | `messageId` | string (uuid) | Deleted message id. |
-| `recipientId` | string (uuid) | Recipient user id (for 1:1 chats). |
+| `recipientId` | string (uuid) | ID of current user. Can be ignored. |
 | `senderId` | string (uuid) | User who deleted the message. |
 | `timeStamp` | string (date-time) | When deletion happened. |
 
@@ -194,7 +194,7 @@ const unsubscribe = whisp.realtime.on("reply", (event) => {
 | `messageId` | string (uuid) | The reply message id. |
 | `message` | string | Reply content. |
 | `chatId` | string (uuid) | Chat where the reply happened. |
-| `recipientId` | string (uuid) | Recipient user id (for 1:1 chats). |
+| `recipientId` | string (uuid) | ID of current user. Can be ignored. |
 | `senderId` | string (uuid) | User who replied. |
 | `replyTo` | object | Snapshot of the original message. |
 | `timeStamp` | string (date-time) | When the reply was created. |
@@ -241,7 +241,7 @@ const unsubscribe = whisp.realtime.on("typing", (event) => {
 |---|---|---|
 | `type` | string | Event type. Here it is `TYPING`. |
 | `chatId` | string (uuid) | Chat where typing happened. |
-| `recipientId` | string (uuid) | Recipient user id (for 1:1 chats). |
+| `recipientId` | string (uuid) | ID of current user. Can be ignored. |
 | `senderId` | string (uuid) | User who is typing. |
 
 **Example**
@@ -276,7 +276,7 @@ const unsubscribe = whisp.realtime.on("reaction", (event) => {
 | `messageId` | string (uuid) | **Reaction id** (use it to delete the reaction). |
 | `message` | string | Reaction emoji. |
 | `chatId` | string (uuid) | Chat where the reaction happened. |
-| `recipientId` | string (uuid) | Recipient user id (for 1:1 chats). |
+| `recipientId` | string (uuid) | ID of current user. Can be ignored. |
 | `senderId` | string (uuid) | User who reacted. |
 | `parentMessageId` | string (uuid) | Message id that was reacted to. |
 | `timeStamp` | string (date-time) | When the reaction was created. |
@@ -316,7 +316,7 @@ const unsubscribe = whisp.realtime.on("reactionDeleted", (event) => {
 | `type` | string | Event type. Here it is `DELETE_REACT`. |
 | `messageId` | string (uuid) | Reaction id that was removed. |
 | `chatId` | string (uuid) | Chat where the reaction was removed. |
-| `recipientId` | string (uuid) | Recipient user id (for 1:1 chats). |
+| `recipientId` | string (uuid) | ID of current user. Can be ignored. |
 | `senderId` | string (uuid) | User who removed the reaction. |
 
 **Example**
@@ -354,7 +354,7 @@ const unsubscribe = whisp.realtime.on("messageRead", (event) => {
 |---|---|---|
 | `type` | string | Event type. Here it is `READ_MSG`. |
 | `chatId` | string (uuid) | Chat where the read happened. |
-| `recipientId` | string (uuid) | Recipient user id (for 1:1 chats). |
+| `recipientId` | string (uuid) | ID of current user. Can be ignored. |
 | `senderId` | string (uuid) | User who read the message. |
 | `messageId` | string (uuid) | Last read message id (for that read action). |
 
@@ -391,7 +391,7 @@ const unsubscribe = whisp.realtime.on("userJoined", (event) => {
 | `chatId` | string (uuid) | Chat that was joined. |
 | `message` | string (uuid) | New user’s id. |
 | `username` | string | New user’s username. |
-| `recipientId` | string (uuid) | Recipient user id (for 1:1 chats). |
+| `recipientId` | string (uuid) | ID of current user. Can be ignored. |
 | `senderId` | string (uuid) | User who triggered the join (e.g. inviter). |
 
 **Example**
@@ -427,7 +427,7 @@ const unsubscribe = whisp.realtime.on("userLeft", (event) => {
 | `type` | string | Event type. Here it is `USER_LEAVE`. |
 | `chatId` | string (uuid) | Chat that was left. |
 | `message` | string | Leave message (human-readable). |
-| `recipientId` | string (uuid) | Recipient user id (for 1:1 chats). |
+| `recipientId` | string (uuid) | ID of current user. Can be ignored. |
 | `timeStamp` | string (date-time) | When the leave happened. |
 | `senderId` | string (uuid) | User who left (or was removed). |
 
@@ -464,7 +464,7 @@ const unsubscribe = whisp.realtime.on("chatCreated", (event) => {
 | `type` | string | Event type. Here it is `NEW_CHAT`. |
 | `timeStamp` | string (date-time) | When the chat was created. |
 | `chatId` | string (uuid) | New chat id. |
-| `recipientId` | string (uuid) | Recipient user id (for 1:1 chats). |
+| `recipientId` | string (uuid) | ID of current user. Can be ignored. |
 | `senderId` | string (uuid) | User who created the chat. |
 | `message` | string | Chat name. |
 
@@ -500,7 +500,7 @@ const unsubscribe = whisp.realtime.on("chatDeleted", (event) => {
 |---|---|---|
 | `type` | string | Event type. Here it is `DELETE_CHAT`. |
 | `chatId` | string (uuid) | Deleted chat id. |
-| `recipientId` | string (uuid) | Recipient user id (for 1:1 chats). |
+| `recipientId` | string (uuid) | ID of current user. Can be ignored. |
 | `senderId` | string (uuid) | User who deleted the chat. |
 
 **Example**

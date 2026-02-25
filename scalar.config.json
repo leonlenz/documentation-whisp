@@ -6,7 +6,7 @@
     "description": "SDKs, guides, and REST API reference for integrating Whisp into your apps."
   },
   "siteConfig": {
-    "subdomain": "whisp",
+    "customDomain": "docs.whispchat.com",
     "theme": "default",
     "logo": "docs/assets/whisp-logo.svg",
     "head": {

@@ -8,7 +8,7 @@ If you only need to *receive* updates, see [Realtime](/sdks/js/realtime).
 
 ---
 
-## Action methods (send to `/api/chat`)
+## Action methods
 
 ### `realtime.sendMessage(chatId, message)`
 
