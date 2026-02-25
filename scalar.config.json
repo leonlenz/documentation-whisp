@@ -140,11 +140,6 @@
                 "title": "Realtime Actions",
                 "filepath": "docs/sdks/js/realtime-actions.md"
               },
-              "events": {
-                "type": "page",
-                "title": "Event Types",
-                "filepath": "docs/sdks/js/events.md"
-              },
               "errors": {
                 "type": "page",
                 "title": "Errors & Retries",

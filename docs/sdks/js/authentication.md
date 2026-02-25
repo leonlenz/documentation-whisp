@@ -99,7 +99,7 @@ const user = await whisp.signIn({
 **Parameters**
 
 | Field | Type | Required | Notes |
-|---|---|---|---|
+|---|---|---|
 | `username` | string | required |  |
 | `password` | string (password) | required |  |
 
@@ -107,13 +107,13 @@ const user = await whisp.signIn({
 
 ### SignInResponse
 
-| Field | Type | Required | Notes |
-|---|---|---|---|
-| `id` | string (uuid) | optional |  |
-| `username` | string | optional |  |
-| `email` | string (email) | optional |  |
-| `refreshToken` | string | optional |  |
-| `roles` | array<string> | optional |  |
+| Field | Type | Notes |
+|---|---|---|
+| `id` | string (uuid) |  |
+| `username` | string |  |
+| `email` | string (email) |  |
+| `refreshToken` | string |  |
+| `roles` | array<string> |  |
 
 **Example**
 
@@ -187,12 +187,12 @@ const me = await whisp.getUser();
 
 ### UserInfo
 
-| Field | Type | Required | Notes |
-|---|---|---|---|
-| `id` | string (uuid) | optional |  |
-| `username` | string | optional |  |
-| `email` | string (email) | optional |  |
-| `role` | array<string> | optional |  |
+| Field | Type | Notes |
+|---|---|---|
+| `id` | string (uuid) |  |
+| `username` | string |  |
+| `email` | string (email) |  |
+| `role` | array<string> |  |
 
 **Example**
 

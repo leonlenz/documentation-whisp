@@ -28,34 +28,34 @@ const older = await whisp.getMessages(chatId, 50, cursor);
 
 ### MessagesResponse
 
-| Field | Type | Required | Notes |
-|---|---|---|---|
-| `messages` | array[Message] | optional |  |
+| Field | Type | Notes |
+|---|---|---|
+| `messages` | array[Message] |  |
 
 ### Message
 
-| Field | Type | Required | Notes |
-|---|---|---|---|
-| `chatId` | string (uuid) | optional |  |
-| `timeStamp` | string (date-time) | optional |  |
-| `messageId` | string (uuid) | optional |  |
-| `senderId` | string (uuid) | optional |  |
-| `content` | string | optional |  |
-| `edited` | boolean | optional |  |
-| `editedAt` | string (date-time) | null | optional |  |
-| `replyTo` | object | optional |  |
-| `reactions` | array[Reaction] | optional |  |
+| Field | Type | Notes |
+|---|---|---|
+| `chatId` | string (uuid) |  |
+| `timeStamp` | string (date-time) |  |
+| `messageId` | string (uuid) |  |
+| `senderId` | string (uuid) |  |
+| `content` | string |  |
+| `edited` | boolean |  |
+| `editedAt` | string (date-time) or null |  |
+| `replyTo` | object |  |
+| `reactions` | array[Reaction] |  |
 
 ### Reaction
 
-| Field | Type | Required | Notes |
-|---|---|---|---|
-| `reactionId` | string (uuid) | optional |  |
-| `chatId` | string (uuid) | optional |  |
-| `messageId` | string (uuid) | optional |  |
-| `senderId` | string (uuid) | optional |  |
-| `reaction` | string | optional |  |
-| `createdAt` | string (date-time) | optional |  |
+| Field | Type | Notes |
+|---|---|---|
+| `reactionId` | string (uuid) |  |
+| `chatId` | string (uuid) |  |
+| `messageId` | string (uuid) |  |
+| `senderId` | string (uuid) |  |
+| `reaction` | string |  |
+| `createdAt` | string (date-time) |  |
 
 **Example**
 

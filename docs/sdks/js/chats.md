@@ -22,15 +22,15 @@ const chat = await whisp.createChat("Project Discussion", ["johndoe", "janedoe"]
 
 ### ChatDetails
 
-| Field | Type | Required | Notes |
-|---|---|---|---|
-| `chatId` | string (uuid) | optional |  |
-| `chatName` | string | optional |  |
-| `lastMessageTimestamp` | string (date-time) | optional |  |
-| `lastMessage` | string | optional |  |
-| `createdAt` | string (date-time) | optional |  |
-| `creator` | string (uuid) | optional |  |
-| `groupChat` | boolean | optional |  |
+| Field | Type | Notes |
+|---|---|---|
+| `chatId` | string (uuid) |  |
+| `chatName` | string |  |
+| `lastMessageTimestamp` | string (date-time) |  |
+| `lastMessage` | string |  |
+| `createdAt` | string (date-time) |  |
+| `creator` | string (uuid) |  |
+| `groupChat` | boolean |  |
 
 **Example**
 
@@ -70,16 +70,19 @@ console.log(result.chats);
 
 | Field | Type | Required | Notes |
 |---|---|---|---|
-| `chats` | array[ChatUserInfo] | optional |  |
+| `chats` | array[ChatDetails] | optional |  |
 
-### ChatUserInfo
+### ChatDetails
 
 | Field | Type | Required | Notes |
 |---|---|---|---|
-| `userId` | string (uuid) | optional |  |
-| `username` | string | optional |  |
-| `joinedChatAt` | string (date-time) | optional |  |
-| `lastSeenMessage` | string (uuid) | optional |  |
+| `chatId` | string (uuid) | optional |  |
+| `chatName` | string | optional |  |
+| `lastMessageTimestamp` | string (date-time) | optional |  |
+| `lastMessage` | string | optional |  |
+| `createdAt` | string (date-time) | optional |  |
+| `creator` | string (uuid) | optional |  |
+| `groupChat` | boolean | optional |  |
 
 **Example**
 
@@ -119,18 +122,18 @@ const { users } = await whisp.getChatUsers(chatId);
 
 ### ChatUsersResponse
 
-| Field | Type | Required | Notes |
-|---|---|---|---|
-| `users` | array[ChatUserInfo] | optional |  |
+| Field | Type | Notes |
+|---|---|---|
+| `users` | array[ChatUserInfo] |  |
 
 ### ChatUserInfo
 
-| Field | Type | Required | Notes |
-|---|---|---|---|
-| `userId` | string (uuid) | optional |  |
-| `username` | string | optional |  |
-| `joinedChatAt` | string (date-time) | optional |  |
-| `lastSeenMessage` | string (uuid) | optional |  |
+| Field | Type | Notes |
+|---|---|---|
+| `userId` | string (uuid) |  |
+| `username` | string |  |
+| `joinedChatAt` | string (date-time) |  |
+| `lastSeenMessage` | string (uuid) |  |
 
 **Example**
 
@@ -230,31 +233,4 @@ await whisp.deleteChat(chatId);
 
 ---
 
-## Data models used on this page
-
-### ChatDetails
-
-| Field | Type | Required | Notes |
-|---|---|---|---|
-| `chatId` | string (uuid) | optional |  |
-| `chatName` | string | optional |  |
-| `lastMessageTimestamp` | string (date-time) | optional |  |
-| `lastMessage` | string | optional |  |
-| `createdAt` | string (date-time) | optional |  |
-| `creator` | string (uuid) | optional |  |
-| `groupChat` | boolean | optional |  |
-
-**Example**
-
-```json
-{
-  "chatId": "550e8400-e29b-41d4-a716-446655440000",
-  "chatName": "string",
-  "lastMessageTimestamp": "2024-01-15T10:30:00Z",
-  "lastMessage": "string",
-  "createdAt": "2024-01-15T10:30:00Z",
-  "creator": "550e8400-e29b-41d4-a716-446655440000",
-  "groupChat": false
-}
-```
 
