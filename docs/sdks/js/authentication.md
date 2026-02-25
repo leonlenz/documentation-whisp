@@ -239,35 +239,6 @@ Delete the authenticated user, including all their data/messages.
 
 **Returns:** `void`
 
----
-
-## `getTicket()` (client-side)
-
-Get a short-lived ticket required to open a WebSocket connection.
-
-**REST mapping:** `GET /api/user/getTicket`
-
-```ts
-const { ticket } = await whisp.getTicket();
-```
-
-**Returns**
-
-### TicketResponse
-
-| Field | Type | Required | Notes |
-|---|---|---|---|
-| `ticket` | string | optional | Short-lived ticket (~20 seconds) |
-
-**Example**
-
-```json
-{
-  "ticket": "c2f9c3a0-...-ticket-string"
-}
-```
-
-
-:::scalar-callout{type="warning"}
-Tickets are valid for ~20 seconds. Fetch a ticket immediately before connecting (and for every reconnect).
+:::scalar-callout{type="info"}
+Realtime connections are handled by `whisp.realtime.connect()`. The SDK takes care of any low-level handshake steps.
 :::

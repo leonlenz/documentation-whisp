@@ -28,5 +28,5 @@ await whisp.realtime.connect();
 ```
 
 :::scalar-callout{type="info"}
-`getTicket()` returns a ticket valid for ~20 seconds. The SDK fetches a fresh ticket when connecting and reconnecting.
+In Node.js, make sure you pass `webSocketImpl` (e.g. the `ws` package) to the constructor. The SDK handles the realtime connection lifecycle.
 :::

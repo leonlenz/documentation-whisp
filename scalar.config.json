@@ -135,6 +135,11 @@
                 "title": "Realtime",
                 "filepath": "docs/sdks/js/realtime.md"
               },
+              "realtime-actions": {
+                "type": "page",
+                "title": "Realtime Actions",
+                "filepath": "docs/sdks/js/realtime-actions.md"
+              },
               "events": {
                 "type": "page",
                 "title": "Event Types",

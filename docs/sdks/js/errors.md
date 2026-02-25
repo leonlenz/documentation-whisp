@@ -57,5 +57,5 @@ The SDK throws a `WhispError` for HTTP-level errors and surfaces WebSocket error
 
 ## WebSocket errors
 
-- Ticket expired (connect too late) → fetch a new ticket and reconnect
-- Wrong JWT placement (sent as HTTP header instead of STOMP header) → connect will fail
+- Most connection failures are caused by missing/expired auth (JWT not set), network restrictions (WebSockets blocked), or transient connectivity.
+- If realtime fails repeatedly, re-authenticate the user and retry `whisp.realtime.connect()` with backoff.

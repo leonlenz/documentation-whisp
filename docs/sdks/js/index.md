@@ -10,7 +10,7 @@ Package: `whisp-sdk`
 
 - REST API wrapper (same request/response models as the REST API)
 - auth state management (`setAuth`, `getAuth`, `logout`, `refresh`)
-- realtime (STOMP over WebSocket) wrapped behind `whisp.realtime.*`
+- realtime (WebSocket under the hood) wrapped behind `whisp.realtime.*`
 
 ## Quick links
 
@@ -20,8 +20,8 @@ Package: `whisp-sdk`
 - [Authentication (function-by-function)](/sdks/js/authentication)
 - [Chats (function-by-function)](/sdks/js/chats)
 - [Messages (function-by-function)](/sdks/js/messages)
-- [Realtime (function-by-function)](/sdks/js/realtime)
-- [Event Types & payloads](/sdks/js/events)
+- [Realtime: receiving events](/sdks/js/realtime)
+- [Realtime: action methods](/sdks/js/realtime-actions)
 - [Errors & retries](/sdks/js/errors)
 
 ## Constructor

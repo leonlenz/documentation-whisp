@@ -3,9 +3,10 @@
 ## Realtime fails to connect
 
 **Checklist**
-1. Fetch a ticket immediately before connecting (`getTicket`)
-2. Connect to: `https://<clientDomain>.api.whispchat.com/api/wsConnect?ticket=<ticket>`
-3. Pass JWT as a **STOMP** header (`Authorization: Bearer <JWT>`) — not an HTTP header
+1. Confirm the client is authenticated (you called `signIn(...)` or restored auth via `setAuth(...)`).
+2. Call `await whisp.realtime.connect()` only after auth is set.
+3. If you run realtime in **Node.js**, pass a WebSocket implementation (e.g. `ws`) as `webSocketImpl` when constructing the client.
+4. If you are behind a corporate proxy / firewall, verify that WebSocket connections are allowed.
 
 ## “401” loops
 
@@ -13,7 +14,7 @@
 
 ## Missing messages after reconnect
 
-The realtime protocol does not guarantee re-delivery of all missed events across reconnects. After reconnect, backfill by calling:
+If the client was offline, you may have missed realtime events. After reconnect, backfill by calling:
 
 - `getMessages(chatId, size, lastMessageId?)`
 
