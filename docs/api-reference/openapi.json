@@ -148,9 +148,9 @@
         }
       }
     },
-    "/api/user/getTicket": {
+    "/api/auth/getTicket": {
       "get": {
-        "tags": ["User"],
+        "tags": ["Authentication"],
         "summary": "Get WebSocket Ticket",
         "description": "Fetches a ticket required to open a WebSocket connection.\n\n**Important:** This ticket is very short-lived (~20 seconds). Use it immediately to establish the WebSocket connection.",
         "operationId": "getTicket",

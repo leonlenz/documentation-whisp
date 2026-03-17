@@ -22,7 +22,7 @@ For browser apps, the recommended setup is: **backend authenticates with API key
 
 ## Real-time messaging
 
-Whisp realtime uses **STOMP over WebSocket (SockJS)** and requires a short-lived **ticket** from `GET /api/user/getTicket`.
+Whisp realtime uses **STOMP over WebSocket (SockJS)** and requires a short-lived **ticket** from `GET /api/auth/getTicket`.
 
 If you use the JS/TS SDK, the realtime layer is wrapped behind `whisp.realtime.*`.
 
