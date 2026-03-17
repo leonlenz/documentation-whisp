@@ -6,6 +6,8 @@ Realtime keeps your UI in sync by delivering events (new messages, edits, typing
 Prerequisite: the client must be authenticated (JWT set via `signIn(...)` or `setAuth(...)`). See [Authentication](/sdks/js/authentication).
 :::
 
+Events are sent to all connected user even the sender. This means that when a user sends a message and recieves it back over the realtime connection the UI can mark it as "persisted in the backend / delivered".
+
 ---
 
 ## Connect / Disconnect

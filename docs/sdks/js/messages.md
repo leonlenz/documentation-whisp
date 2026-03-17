@@ -12,11 +12,9 @@ The `getMessages` function automatically triggers a read on the last message in 
 
 Fetch message history for a chat using cursor-based pagination.
 
-**REST mapping:** `GET /api/messages/getMessages/<chatId>?size=<size>&lastMessage=<cursor>`
-
 ```ts
-const result = await whisp.getMessages(chatId);
-const older = await whisp.getMessages(chatId, 50, cursor);
+const messages = await whisp.getMessages(chatId);
+const olderMessages = await whisp.getMessages(chatId, 50, cursor);
 ```
 
 **Parameters**

@@ -8,8 +8,6 @@ This page documents chat-related SDK functions **individually**, including param
 
 Create a new chat with two or more users.
 
-**REST mapping:** `POST /api/chat/createChat`
-
 ```ts
 const chat = await whisp.createChat("Project Discussion", ["johndoe", "janedoe"]);
 ```
@@ -52,8 +50,6 @@ const chat = await whisp.createChat("Project Discussion", ["johndoe", "janedoe"]
 ## `getChats(page?, size?)`
 
 List chats for the authenticated user.
-
-**REST mapping:** `GET /api/chat/getChats?page=<page>&size=<size>`
 
 ```ts
 const result = await whisp.getChats(0, 20);
@@ -109,8 +105,6 @@ console.log(result.chats);
 
 List users in a chat.
 
-**REST mapping:** `GET /api/chat/getUsers/<chatId>`
-
 ```ts
 const { users } = await whisp.getChatUsers(chatId);
 ```
@@ -157,8 +151,6 @@ const { users } = await whisp.getChatUsers(chatId);
 
 Add a user to an existing chat.
 
-**REST mapping:** `POST /api/chat/addUser`
-
 ```ts
 await whisp.addUserToChat(chatId, "newuser");
 ```
@@ -177,8 +169,6 @@ await whisp.addUserToChat(chatId, "newuser");
 ## `removeUserFromChat(chatId, removeUserId)`
 
 Remove a user from a chat (leave or kick).
-
-**REST mapping:** `POST /api/chat/removeUser`
 
 ```ts
 await whisp.removeUserFromChat(chatId, userId);
@@ -199,8 +189,6 @@ await whisp.removeUserFromChat(chatId, userId);
 
 Change the name of an existing chat.
 
-**REST mapping:** `POST /api/chat/changeName`
-
 ```ts
 await whisp.changeChatName(chatId, "Updated Name");
 ```
@@ -219,8 +207,6 @@ await whisp.changeChatName(chatId, "Updated Name");
 ## `deleteChat(chatId)`
 
 Delete a chat (creator-only).
-
-**REST mapping:** `DELETE /api/chat/deleteChat?chatId=<chatId>`
 
 ```ts
 await whisp.deleteChat(chatId);

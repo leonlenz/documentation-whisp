@@ -50,8 +50,6 @@ if (!whisp.isAuthenticated) {
 
 Registers a new user account.
 
-**REST mapping:** `POST /api/user/registerUser`
-
 **Signature**
 
 ```ts
@@ -85,8 +83,6 @@ Authenticates a user. The server returns:
 - JWT in **`Authorization` response header** (`Bearer <JWT>`)
 - refresh token in response body
 
-**REST mapping:** `POST /api/user/signin`
-
 **Signature**
 
 ```ts
@@ -99,7 +95,7 @@ const user = await whisp.signIn({
 **Parameters**
 
 | Field | Type | Required | Notes |
-|---|---|---|
+|---|---|---|---|
 | `username` | string | required |  |
 | `password` | string (password) | required |  |
 
@@ -142,8 +138,6 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiJ9...
 
 Refresh an expired JWT using the refresh token.
 
-**REST mapping:** `POST /api/auth/refresh`
-
 **What the API expects**
 - `Authorization: Bearer <refreshToken>` header
 - body: `{ "expiredJwt": "<expired_jwt>" }`
@@ -157,8 +151,6 @@ Refresh an expired JWT using the refresh token.
 
 Invalidates the current refresh token.
 
-**REST mapping:** `POST /api/auth/logout`
-
 **Returns:** `void`
 
 ---
@@ -167,8 +159,6 @@ Invalidates the current refresh token.
 
 Invalidates **all** refresh tokens for the authenticated user.
 
-**REST mapping:** `POST /api/auth/logoutAll`
-
 **Returns:** `void`
 
 ---
@@ -176,8 +166,6 @@ Invalidates **all** refresh tokens for the authenticated user.
 ## `getUser()` (client-side)
 
 Fetch the authenticated user’s profile.
-
-**REST mapping:** `GET /api/user/getUser`
 
 ```ts
 const me = await whisp.getUser();
@@ -214,8 +202,6 @@ const me = await whisp.getUser();
 
 Change the authenticated user’s username. The API returns a **new JWT** in the `Authorization` response header.
 
-**REST mapping:** `POST /api/user/changeUsername`
-
 ```ts
 await whisp.changeUsername("johndoe_updated");
 ```
@@ -234,8 +220,6 @@ await whisp.changeUsername("johndoe_updated");
 ## `deleteUser()` (client-side)
 
 Delete the authenticated user, including all their data/messages.
-
-**REST mapping:** `DELETE /api/user/deleteUser`
 
 **Returns:** `void`
 
