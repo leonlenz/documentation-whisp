@@ -2,6 +2,12 @@
 
 Whisp is a scalable chat infrastructure you can integrate into web, iOS, and Android apps using SDKs and APIs.
 
+:::scalar-card{title="Getting Started" leftIcon="phosphor/regular/rocket-launch"}
+Create a Whisp account, set up your first app in the dashboard, and generate an API key.
+
+[Start here →](/getting-started)
+:::
+
 :::scalar-card{title="JavaScript / TypeScript SDK" leftIcon="phosphor/regular/package"}
 Production-ready integration for browser and Node.js.
 
