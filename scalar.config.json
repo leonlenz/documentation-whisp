@@ -79,6 +79,12 @@
         "title": "Getting Started",
         "filepath": "docs/getting-started.md"
       },
+      "/ai-agents": {
+        "type": "page",
+        "title": "AI Agent Integration",
+        "filepath": "docs/ai-agents.md",
+        "icon": "phosphor/regular/robot"
+      },
       "/sdks": {
         "type": "group",
         "title": "SDKs",
