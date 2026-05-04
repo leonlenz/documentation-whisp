@@ -49,19 +49,6 @@
     "header": [
       {
         "type": "link",
-        "title": "Docs",
-        "to": "/",
-        "style": "button"
-      },
-      {
-        "type": "link",
-        "title": "API",
-        "to": "/api",
-        "style": "button",
-        "icon": "phosphor/regular/brackets-angle"
-      },
-      {
-        "type": "link",
         "title": "Status",
         "to": "https://status.whispchat.com",
         "newTab": true

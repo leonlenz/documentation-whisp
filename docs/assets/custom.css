@@ -1,5 +1,6 @@
-/* Enlarge the leftIcon inside scalar-card components on the landing page. */
-.card > svg.t-editor__icon {
-  width: 2.25em;
-  height: 2.25em;
+/* Enlarge only the robot icon on the AI Agent Integration card.
+   We identify that card by its link to /ai-agents (no per-card class is exposed). */
+.card:has(a[href="/ai-agents"]) > svg.t-editor__icon {
+  width: 3em;
+  height: 3em;
 }
