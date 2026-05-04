@@ -9,7 +9,7 @@ Create a Whisp account, set up your first app in the dashboard, and generate an 
 :::
 
 :::scalar-card{title="AI Agent Integration" leftIcon="phosphor/regular/robot"}
-**Building Whisp into a product with an AI coding agent (Claude, Cursor, Copilot, etc.)?** Start here. This guide walks an agent end-to-end through account setup, app creation, and API key generation — no manual dashboard interaction required.
+**Building Whisp into a product with an AI coding agent (Claude, Cursor, Copilot, etc.)?** Start here. This guide walks an agent end-to-end through account setup, app creation, and API key generation, no manual dashboard interaction required.
 
 [Open the AI agent guide →](/ai-agents)
 :::

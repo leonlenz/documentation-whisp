@@ -22,6 +22,11 @@
           "rel": "icon",
           "href": "/whisp-logo.svg"
         }
+      ],
+      "styles": [
+        {
+          "path": "docs/assets/custom.css"
+        }
       ]
     },
     "routing": {

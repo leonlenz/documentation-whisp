@@ -1,0 +1,5 @@
+/* Enlarge the leftIcon inside scalar-card components on the landing page. */
+.card > svg.t-editor__icon {
+  width: 2.25em;
+  height: 2.25em;
+}
